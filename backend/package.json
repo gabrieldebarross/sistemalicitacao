@@ -13,10 +13,13 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:migrate": "sequelize-cli db:migrate",
-    "db:migrate:undo": "sequelize-cli db:migrate:undo",
-    "db:seed:all": "sequelize-cli db:seed:all",
-    "db:seed:undo": "sequelize-cli db:seed:undo:all"
+    "db:create": "sequelize-cli db:create --config database/config.cjs",
+    "db:drop": "sequelize-cli db:drop --config database/config.cjs",
+    "db:migrate": "sequelize-cli db:migrate --config database/config.cjs --migrations-path database/migrations --seeders-path database/seeders",
+    "db:migrate:undo": "sequelize-cli db:migrate:undo --config database/config.cjs --migrations-path database/migrations --seeders-path database/seeders",
+    "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all --config database/config.cjs --migrations-path database/migrations --seeders-path database/seeders",
+    "db:seed:all": "sequelize-cli db:seed:all --config database/config.cjs --migrations-path database/migrations --seeders-path database/seeders",
+    "db:seed:undo": "sequelize-cli db:seed:undo:all --config database/config.cjs --migrations-path database/migrations --seeders-path database/seeders"
   },
   "keywords": [],
   "author": "",

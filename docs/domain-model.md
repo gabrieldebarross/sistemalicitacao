@@ -42,8 +42,30 @@ documentos) serão avaliadas quando houver necessidade comprovada.
 
 Detalhes de transição em `docs/workflows.md`.
 
+## Tabelas criadas na Fase 3
+
+Cadastros e workflow: `cargos`, `setores`, `tipos_processo`, `fluxos`, `fases`,
+`etapas`, `processos`, `processo_etapas`, `movimentacoes`.
+
+Acesso e auditoria: `usuarios`, `roles`, `permissions`, `user_roles`,
+`role_permissions`, `user_sector_assignments`, `auditoria`.
+
+Detalhes em `backend/database/migrations/`.
+
+## Decisões de modelagem
+
+- **Cargos:** apenas o nome (normalizado) + `nome_original` para rastreabilidade;
+  os campos numéricos e demais atributos de origem foram removidos (ADR 0004).
+- **Versionamento de fluxo:** o número da versão fica na própria linha de
+  `fluxos` (`versao`), com unicidade em `(tipo_processo_id, nome, versao)`. O
+  processo guarda a referência da versão usada e a instância de etapa copia
+  (snapshot) os dados relevantes, preservando o histórico mesmo que o fluxo
+  seja alterado.
+- **`movimentacoes` e `auditoria`:** imutáveis (apenas `created_at`).
+- **Permissões:** nenhuma concedida por padrão; a matriz papel × permissão deve
+  ser definida pela administração (ADR 0002).
+
 ## Pendências de modelagem
 
-- Semântica dos dois campos numéricos dos cargos (ver ADR 0001).
-- Estratégia de versionamento de fluxo (`fluxo_versoes` vs. campos na própria linha).
 - Política de soft delete por entidade.
+- Definição da matriz papel × permissão (administração).

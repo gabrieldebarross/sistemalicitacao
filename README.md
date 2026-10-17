@@ -67,6 +67,29 @@ caracteres).
 | `JWT_SECRET`, `JWT_EXPIRES_IN` | Autenticação |
 | `LOG_LEVEL` | `debug` \| `info` \| `warn` \| `error` |
 
+## Banco de dados (desenvolvimento)
+
+Há um MySQL de **desenvolvimento** no `docker-compose.dev.yml` (sem senha de
+root, apenas para uso local — **não usar em produção**):
+
+```bash
+# na raiz do monorepo
+docker compose -f docker-compose.dev.yml up -d      # sobe o MySQL local
+docker compose -f docker-compose.dev.yml down       # para o MySQL
+docker compose -f docker-compose.dev.yml down -v    # para e apaga os dados
+```
+
+Migrations e seeders são versionados e aplicados pela CLI do Sequelize:
+
+```bash
+pnpm -C backend db:migrate       # aplica as migrations pendentes
+pnpm -C backend db:migrate:undo  # reverte a última migration
+pnpm -C backend db:seed:all      # aplica os seeders
+pnpm -C backend db:seed:undo     # reverte os seeders
+```
+
+Não use `sync({ alter/force })`. Toda mudança de schema passa por migration.
+
 ## Execução
 
 ```bash

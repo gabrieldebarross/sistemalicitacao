@@ -1,0 +1,29 @@
+# MySQL de DESENVOLVIMENTO local. NÃO usar em produção.
+# Sem senha de root (senha vazia), apenas para desenvolvimento e testes locais.
+# A imagem sobe um banco "sistema_licitacoes" e o volume persiste os dados.
+#
+# Uso:
+#   docker compose -f docker-compose.dev.yml up -d
+#   docker compose -f docker-compose.dev.yml down
+# (remover dados: docker compose -f docker-compose.dev.yml down -v)
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: sistema_licitacao_mysql_dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+      MYSQL_DATABASE: sistema_licitacoes
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  mysql_dev_data:
