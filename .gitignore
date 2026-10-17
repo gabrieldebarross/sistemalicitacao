@@ -1,4 +1,55 @@
-node_modules
-.env
+# Dependências
+node_modules/
+
+# Build
 dist/
+.next/
+build/
+
+# Testes / cobertura
+coverage/
+.nyc_output/
+
+# Variáveis de ambiente reais (NUNCA versionar)
+.env
+.env.*
+!.env.example
+
+# Certificados e chaves privadas
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+id_rsa*
+id_ed25519*
+
+# Credenciais e arquivos de autenticação
+*credential*
+*secret*
+
+# Backups e dumps locais
+*.sql
+*.dump
+*.sql.gz
+*.bak
+backups/
+
+# Logs
+*.log
+logs/
+
+# Temporários
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Arquivo interno (não publicar)
 READMEinterno.md
