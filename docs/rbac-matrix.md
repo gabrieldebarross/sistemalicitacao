@@ -12,22 +12,40 @@
 Um cargo **não** concede automaticamente autoridade. Papéis são atribuídos
 conforme autorização administrativa documentada.
 
-## Papéis iniciais
+## Papéis (decisão ADR 0002)
 
-| Papel | Propósito |
-| --- | --- |
-| `SUPER_ADMIN_SISTEMA` | Administração técnica e configuração global. |
-| `ADMINISTRADOR` | Administração funcional de usuários, setores e cadastros. |
-| `GESTOR_LICITACOES` | Acompanhamento e gestão dos processos. |
-| `AGENTE_CONTRATACAO` | Execução de atividades atribuídas. |
-| `EQUIPE_PLANEJAMENTO` | Preparação e instrução dos processos. |
-| `JURIDICO_PARECERISTA` | Análise jurídica e manifestações. |
-| `FINANCEIRO_ORCAMENTARIO` | Etapas financeiras e orçamentárias. |
-| `DEMANDANTE` | Abertura de demandas e acompanhamento próprio. |
-| `AUTORIDADE_COMPETENTE` | Decisões e aprovações atribuídas. |
-| `CONTROLE_INTERNO` | Consulta e fiscalização autorizada. |
-| `CONSULTA_AUDITORIA` | Consulta de dados/histórico, sem alteração. |
-| `SERVIDOR_OPERADOR` | Tarefas administrativas autorizadas. |
+Decisão do responsável: os papéis de acesso (`Role`) são criados **com os nomes
+dos cargos funcionais**. Isso **não** elimina a separação conceitual: o nome do
+papel vem do cargo, mas as **permissões** são atribuídas explicitamente na tabela
+`role_permissions`, sem inferência automática do nome.
+
+Cargos que originam papéis (grafia normalizada; original preservado em
+`nome_original`):
+
+- Assistente Administrativo
+- Técnico em Enfermagem
+- Farmacêutico Bioquímico/Biomédico
+- Contador
+- Técnico em Análises Clínicas
+- Estagiário(a) Setor de Enfermagem
+- Estagiário(a) Laboratório
+- Advogado
+- Enfermeiro
+- Técnico em Raio-X
+- Técnico em Informática
+- Agente Administrativo
+- Auxiliar de Serviços Gerais
+- Psicólogo
+- Coordenador
+- Assessor Jurídico
+- Diretor Administrativo Financeiro
+- Diretor Serviços Saúde
+- Supervisor(a) Administrativo
+
+> Pendente (Fase 5): como conceder administração técnica do sistema apenas com
+> papéis derivados de cargos, e qual autoridade concede cada permissão sensível.
+> Provisionamento inicial de administrador por procedimento seguro (sem senha
+> universal).
 
 ## Permissões (catálogo inicial)
 

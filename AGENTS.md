@@ -109,25 +109,24 @@ Classes apenas quando houver estado/comportamento/contrato que justifique.
 
 ## 8. Organização das pastas
 
-Estrutura alvo (monorepo). A estrutura atual é **backend na raiz** (ver
-`docs/decisions/`); o frontend será adicionado em `frontend/` quando a Fase 10
-iniciar. Não rearranjar pastas existentes sem decisão registrada.
+Monorepo (decidido no ADR 0002). O backend vive em `backend/`; o frontend será
+criado em `frontend/` na Fase 10.
 
 ```text
 sistema_licitacao/
-├── AGENTS.md
-├── README.md
-├── opencode.json
-├── .env.example
+├── AGENTS.md  README.md  opencode.json  .env.example
+├── pnpm-workspace.yaml
 ├── .opencode/skills/
 ├── docs/
-├── src/            # backend (estrutura atual)
-│   ├── config/ controllers/ middlewares/ models/
-│   ├── repositories/ routes/ services/ domain/
-│   ├── types/ utils/ app.ts server.ts
-├── database/migrations/  database/seeders/
-├── tests/
-└── .github/workflows/
+├── backend/
+│   ├── src/
+│   │   ├── config/ controllers/ middlewares/ models/
+│   │   ├── repositories/ routes/ services/ domain/
+│   │   ├── errors/ types/ utils/ app.ts server.ts
+│   ├── database/migrations/  database/seeders/
+│   ├── tests/
+│   ├── .sequelizerc  tsconfig.json  package.json
+└── frontend/                       # Fase 10
 ```
 
 Não criar pastas vazias ou módulos sem responsabilidade definida.
@@ -253,14 +252,17 @@ executados, problemas restantes e sugestão de commit.
 ## 22. Comandos oficiais
 
 ```bash
-pnpm install      # instalar dependências
-pnpm dev          # desenvolvimento
-pnpm build        # compilação TypeScript
-pnpm start        # execução em produção
-pnpm lint         # lint (a configurar)
-pnpm test         # testes (a configurar)
-pnpm sequelize-cli db:migrate   # migrações
-pnpm sequelize-cli db:seed:all  # seeders
+# na raiz do monorepo
+pnpm install                       # instala dependências do workspace
+
+# backend
+pnpm -C backend dev                # desenvolvimento (tsx watch)
+pnpm -C backend build              # compilação (tsc / TypeScript 7)
+pnpm -C backend typecheck          # verificação de tipos
+pnpm -C backend lint               # ESLint
+pnpm -C backend test               # Vitest
+pnpm -C backend db:migrate         # migrações (sequelize-cli)
+pnpm -C backend db:seed:all        # seeders
 ```
 
 ---
