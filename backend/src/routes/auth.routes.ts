@@ -10,6 +10,12 @@ export const authRouter: Router = Router();
 authRouter.post('/login', limitarLogin, controller.login);
 authRouter.post('/logout', controller.logout);
 authRouter.get('/me', autenticar, controller.me);
+authRouter.patch(
+  '/me',
+  autenticar,
+  protegerCsrf,
+  controller.atualizarPerfil,
+);
 authRouter.post(
   '/alterar-senha',
   autenticar,

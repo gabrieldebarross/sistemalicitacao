@@ -17,6 +17,11 @@ processoRouter.post(
   controller.criar,
 );
 processoRouter.get(
+  '/fluxos-disponiveis',
+  exigirPermissao(PERMISSIONS.PROCESSOS_CREATE),
+  controller.fluxosDisponiveis,
+);
+processoRouter.get(
   '/:id',
   exigirPermissao(PERMISSIONS.PROCESSOS_READ),
   controller.detalhar,
@@ -46,6 +51,11 @@ processoRouter.post(
   '/:id/etapas/:etapaId/devolver',
   exigirPermissao(PERMISSIONS.PROCESSOS_RETURN),
   controller.devolverEtapa,
+);
+processoRouter.post(
+  '/:id/etapas/:etapaId/atribuir',
+  exigirPermissao(PERMISSIONS.PROCESSOS_ASSIGN),
+  controller.atribuirEtapa,
 );
 processoRouter.post(
   '/:id/atribuir',

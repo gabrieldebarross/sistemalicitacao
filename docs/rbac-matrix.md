@@ -62,7 +62,20 @@ Regras de comportamento ligadas a essas permissões:
   atribuir um usuário responsável a uma etapa do fluxo (copiado ao criar o
   processo).
 - `roles.manage` inclui atribuir/remover permissões de um papel.
-  `permissions.manage` continua aceita para compatibilidade.
+  `permissions.manage` é um alias de compatibilidade para a mesma atribuição de
+  permissões; ele **não** edita o catálogo. O catálogo é definido pelo código e
+  pelo seeder de permissões.
+- Na criação de processo, se houver mais de um fluxo publicado do tipo, o
+  usuário escolhe explicitamente qual será usado. Havendo apenas um, ele é
+  pré-selecionado.
+- `processos.assign` permite atribuir responsável ao processo e, isoladamente,
+  a cada etapa ainda não concluída/pulada.
+- A devolução não está disponível na primeira etapa. Ao concluir novamente a
+  etapa devolvida, o processo retorna automaticamente para a etapa que fez a
+  devolução.
+- O próprio usuário pode alterar nome, e-mail e senha em **Meu perfil**. Quem
+  possui `usuarios.update` também pode redefinir a senha de outro usuário; nesse
+  caso a troca é exigida no próximo acesso.
 - `reports.read` corresponde ao painel e aos indicadores gerenciais. Não existe
   exportação de relatórios: `reports.export`, `processos.export` e
   `processos.supervise` foram removidas por não possuírem funcionalidade

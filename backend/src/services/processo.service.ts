@@ -6,7 +6,7 @@ import {
   type ProcessoEtapaStatus,
   type ProcessoStatus,
 } from '../domain/enums.js';
-import { podeTransicionarProcesso } from '../domain/workflow.js';
+import { podeTransicionarProcesso, proximaEtapaAposConclusao } from '../domain/workflow.js';
 import {
   ConflictError,
   NotFoundError,
@@ -19,6 +19,7 @@ import * as fluxoRepo from '../repositories/fluxo.repository.js';
 import * as movRepo from '../repositories/movimentacao.repository.js';
 import * as processoRepo from '../repositories/processo.repository.js';
 import * as tipoRepo from '../repositories/tipo-processo.repository.js';
+import * as usuarioRepo from '../repositories/usuario.repository.js';
 import type { ContextoRequisicao } from '../types/context.js';
 import { montarPaginado, type ResultadoPaginado } from '../utils/http.js';
 import { resolverPaginacao } from '../utils/pagination.js';
@@ -27,6 +28,7 @@ import * as auditoria from './auditoria.service.js';
 export interface ProcessoResumoDTO {
   id: number;
   numero: string;
+  nome: string;
   objeto: string;
   status: ProcessoStatus;
   tipoProcesso: { id: number; nome: string } | null;
@@ -50,6 +52,7 @@ export interface ProcessoEtapaDTO {
   dataPrevista: Date | null;
   dataConclusao: Date | null;
   motivoBloqueio: string | null;
+  retornoParaEtapaId: number | null;
   responsavel: { id: number; nome: string } | null;
   setor: { id: number; nome: string } | null;
 }
@@ -83,6 +86,7 @@ function toResumo(processo: Processo): ProcessoResumoDTO {
   return {
     id: processo.id,
     numero: processo.numero,
+    nome: processo.nome,
     objeto: processo.objeto,
     status: processo.status,
     tipoProcesso: processo.tipoProcesso
@@ -119,6 +123,7 @@ function etapaToDTO(etapa: ProcessoEtapa): ProcessoEtapaDTO {
     dataPrevista: etapa.dataPrevista,
     dataConclusao: etapa.dataConclusao,
     motivoBloqueio: etapa.motivoBloqueio,
+    retornoParaEtapaId: etapa.retornoParaEtapaId,
     responsavel: etapa.responsavel
       ? { id: etapa.responsavel.id, nome: etapa.responsavel.nome }
       : null,
@@ -179,6 +184,14 @@ function transicionar(processo: Processo, para: ProcessoStatus): void {
   }
 }
 
+/** Identificação legível do processo para a trilha de auditoria. */
+function identificarProcesso(processo: Processo): {
+  nome: string;
+  numero: string;
+} {
+  return { nome: processo.nome, numero: processo.numero };
+}
+
 async function registrarMovimentacao(
   processo: Processo,
   processoEtapaId: number | null,
@@ -215,8 +228,7 @@ export async function listar(input: {
   busca?: string;
   pagina: number;
   tamanhoPagina: number;
-}): Promise<ResultadoPaginado<ProcessoResumoDTO>> {
-  const { offset, limit, pagina, tamanhoPagina } = resolverPaginacao(input);
+}): Promise<ResultadoPaginado<ProcessoResumoDTO>> {  const { offset, limit, pagina, tamanhoPagina } = resolverPaginacao(input);
   const filtro: processoRepo.FiltroProcesso = {};
   if (input.status !== undefined) {
     filtro.status = input.status;
@@ -237,6 +249,29 @@ export async function listar(input: {
   return montarPaginado(itens.map(toResumo), total, pagina, tamanhoPagina);
 }
 
+/**
+ * Fluxos publicados de um tipo, usados na escolha explícita ao criar processo.
+ * Exige apenas a permissão de criação de processo, não a de leitura de fluxos.
+ */
+export async function fluxosDisponiveis(
+  tipoProcessoId: number,
+): Promise<Array<{ id: number; nome: string; versao: number }>> {
+  const tipo = await tipoRepo.buscarPorId(tipoProcessoId);
+  if (!tipo || !tipo.ativo) {
+    throw new NotFoundError('Tipo de processo não encontrado ou inativo.');
+  }
+  const { itens } = await fluxoRepo.listar(
+    { tipoProcessoId, situacao: 'PUBLICADO' },
+    0,
+    100,
+  );
+  return itens.map((fluxo) => ({
+    id: fluxo.id,
+    nome: fluxo.nome,
+    versao: fluxo.versao,
+  }));
+}
+
 export async function detalhar(id: number): Promise<ProcessoDetalheDTO> {
   const processo = await carregar(id);
   const movimentacoes = await movRepo.listarPorProcesso(id);
@@ -246,9 +281,11 @@ export async function detalhar(id: number): Promise<ProcessoDetalheDTO> {
 export async function criar(
   input: {
     numero: string;
+    nome?: string;
     objeto: string;
     descricao?: string;
     tipoProcessoId: number;
+    fluxoId?: number;
   },
   contexto: ContextoRequisicao,
 ): Promise<ProcessoDetalheDTO> {
@@ -257,18 +294,38 @@ export async function criar(
     throw new NotFoundError('Tipo de processo não encontrado ou inativo.');
   }
   const numero = input.numero.trim();
+  const nome = input.nome?.trim() || numero;
   if (await processoRepo.buscarPorNumero(numero)) {
     throw new ConflictError('Já existe um processo com este número.');
   }
-  const publicado = await fluxoRepo.buscarPublicado(tipo.id);
-  if (!publicado) {
-    throw new ConflictError(
-      'O tipo de processo não possui fluxo publicado. Publique um fluxo antes de criar processos.',
-    );
-  }
-  const fluxo = await fluxoRepo.buscarPorId(publicado.id);
-  if (!fluxo) {
-    throw new ConflictError('Fluxo publicado não encontrado.');
+
+  let fluxo;
+  if (input.fluxoId !== undefined) {
+    fluxo = await fluxoRepo.buscarPorId(input.fluxoId);
+    if (!fluxo) {
+      throw new NotFoundError('Fluxo de trabalho não encontrado.');
+    }
+    if (fluxo.tipoProcessoId !== tipo.id) {
+      throw new ValidationError(
+        'O fluxo escolhido não pertence ao tipo de processo informado.',
+      );
+    }
+    if (fluxo.situacao !== 'PUBLICADO') {
+      throw new ConflictError(
+        'Somente fluxos publicados podem ser usados para criar processos.',
+      );
+    }
+  } else {
+    const publicado = await fluxoRepo.buscarPublicado(tipo.id);
+    if (!publicado) {
+      throw new ConflictError(
+        'O tipo de processo não possui fluxo publicado. Publique um fluxo antes de criar processos.',
+      );
+    }
+    fluxo = await fluxoRepo.buscarPorId(publicado.id);
+    if (!fluxo) {
+      throw new ConflictError('Fluxo publicado não encontrado.');
+    }
   }
 
   const fases = [...(fluxo.fases ?? [])].sort((a, b) => a.ordem - b.ordem);
@@ -285,6 +342,7 @@ export async function criar(
     const criado = await processoRepo.criar(
       {
         numero,
+        nome,
         objeto: input.objeto.trim(),
         descricao: input.descricao?.trim() || null,
         tipoProcessoId: tipo.id,
@@ -339,7 +397,11 @@ export async function criar(
     acao: 'CRIAR',
     recurso: 'processo',
     recursoId: processo.id,
-    metadados: { numero: processo.numero, tipoProcessoId: tipo.id },
+    metadados: {
+      nome: processo.nome,
+      numero: processo.numero,
+      tipoProcessoId: tipo.id,
+    },
   });
 
   return detalhar(processo.id);
@@ -347,7 +409,7 @@ export async function criar(
 
 export async function atualizarDados(
   id: number,
-  input: { objeto?: string; descricao?: string | null },
+  input: { nome?: string; objeto?: string; descricao?: string | null },
   contexto: ContextoRequisicao,
 ): Promise<ProcessoDetalheDTO> {
   const processo = await carregar(id);
@@ -360,6 +422,9 @@ export async function atualizarDados(
       'Processo encerrado não pode ter os dados alterados.',
     );
   }
+  if (input.nome !== undefined) {
+    processo.nome = input.nome.trim();
+  }
   if (input.objeto !== undefined) {
     processo.objeto = input.objeto.trim();
   }
@@ -371,6 +436,10 @@ export async function atualizarDados(
     acao: 'ALTERAR',
     recurso: 'processo',
     recursoId: id,
+    metadados: {
+      ...identificarProcesso(processo),
+      campos: Object.keys(input),
+    },
   });
   return detalhar(id);
 }
@@ -415,6 +484,11 @@ export async function iniciar(
     acao: 'INICIAR',
     recurso: 'processo',
     recursoId: id,
+    metadados: {
+      ...identificarProcesso(processo),
+      etapaId: primeira.id,
+      etapaNome: primeira.nome,
+    },
   });
   return detalhar(id);
 }
@@ -441,18 +515,17 @@ export async function concluirEtapa(
   }
 
   const agora = new Date();
+  const retornoId = atual.retornoParaEtapaId;
+  // Se esta etapa havia sido devolvida, ao concluí-la o fluxo retorna para a
+  // etapa que originou a devolução. Caso contrário, segue a ordem linear.
+  const proxima = proximaEtapaAposConclusao(etapas, atual);
   atual.status = PROCESSO_ETAPA_STATUS.CONCLUIDA;
   atual.dataConclusao = agora;
+  atual.retornoParaEtapaId = null;
   await atual.save();
 
-  const proxima = etapas
-    .filter(
-      (etapa) =>
-        etapa.sequencia > atual.sequencia &&
-        etapa.status !== PROCESSO_ETAPA_STATUS.CONCLUIDA &&
-        etapa.status !== PROCESSO_ETAPA_STATUS.PULADA,
-    )
-    .sort((a, b) => a.sequencia - b.sequencia)[0];
+  const retorno =
+    retornoId && proxima?.id === retornoId ? proxima : undefined;
 
   if (proxima) {
     proxima.status = PROCESSO_ETAPA_STATUS.EM_ANDAMENTO;
@@ -486,7 +559,9 @@ export async function concluirEtapa(
       processo,
       proxima.id,
       'ENCAMINHAMENTO',
-      `Encaminhado para a etapa "${proxima.nome}".`,
+      retorno && proxima.id === retorno.id
+        ? `Devolução cumprida. Retornado para a etapa "${proxima.nome}".`
+        : `Encaminhado para a etapa "${proxima.nome}".`,
       contexto,
     );
   } else {
@@ -502,7 +577,13 @@ export async function concluirEtapa(
     acao: 'CONCLUIR_ETAPA',
     recurso: 'processo',
     recursoId: processoId,
-    metadados: { etapaId },
+    metadados: {
+      ...identificarProcesso(processo),
+      etapaId,
+      etapaNome: atual.nome,
+      proximaEtapaId: proxima?.id ?? null,
+      proximaEtapaNome: proxima?.nome ?? null,
+    },
   });
   return detalhar(processoId);
 }
@@ -557,12 +638,15 @@ export async function devolverEtapa(
     ) {
       etapa.status = PROCESSO_ETAPA_STATUS.PENDENTE;
       etapa.dataConclusao = null;
+      etapa.retornoParaEtapaId = null;
       await etapa.save();
     }
   }
 
   alvo.status = PROCESSO_ETAPA_STATUS.EM_ANDAMENTO;
   alvo.dataConclusao = null;
+  // Ao concluir esta etapa novamente, o processo volta para quem devolveu.
+  alvo.retornoParaEtapaId = atual.id;
   await alvo.save();
 
   atual.status = PROCESSO_ETAPA_STATUS.PENDENTE;
@@ -594,7 +678,13 @@ export async function devolverEtapa(
     recurso: 'processo',
     recursoId: processoId,
     justificativa: input.motivo,
-    metadados: { etapaId, paraEtapaId: alvo.id },
+    metadados: {
+      ...identificarProcesso(processo),
+      etapaId,
+      etapaNome: atual.nome,
+      paraEtapaId: alvo.id,
+      paraEtapaNome: alvo.nome,
+    },
   });
   return detalhar(processoId);
 }
@@ -649,11 +739,95 @@ export async function atribuir(
     recurso: 'processo',
     recursoId: id,
     metadados: {
+      ...identificarProcesso(processo),
       responsavelAtualId: input.responsavelAtualId ?? null,
       setorAtualId: input.setorAtualId ?? null,
     },
   });
   return detalhar(id);
+}
+
+/**
+ * Atribui um responsável a uma etapa específica do processo, sem alterar as
+ * demais etapas. Se a etapa for a atual, o responsável do processo também é
+ * atualizado para refletir a tramitação vigente.
+ */
+export async function atribuirEtapa(
+  processoId: number,
+  etapaId: number,
+  input: { responsavelId: number | null },
+  contexto: ContextoRequisicao,
+): Promise<ProcessoDetalheDTO> {
+  const processo = await carregar(processoId);
+  if (
+    processo.status === PROCESSO_STATUS.CONCLUIDO ||
+    processo.status === PROCESSO_STATUS.ANULADO ||
+    processo.status === PROCESSO_STATUS.REVOGADO
+  ) {
+    throw new ConflictError(
+      'Processo encerrado não pode ter etapas reatribuídas.',
+    );
+  }
+  const etapa = (processo.etapas ?? []).find((item) => item.id === etapaId);
+  if (!etapa) {
+    throw new NotFoundError('Etapa do processo não encontrada.');
+  }
+  if (
+    etapa.status === PROCESSO_ETAPA_STATUS.CONCLUIDA ||
+    etapa.status === PROCESSO_ETAPA_STATUS.PULADA
+  ) {
+    throw new ConflictError(
+      'Etapas concluídas ou puladas não podem ser reatribuídas.',
+    );
+  }
+
+  let responsavelNome: string | null = null;
+  if (input.responsavelId !== null) {
+    const responsavel = await usuarioRepo.buscarPorId(input.responsavelId);
+    if (!responsavel || !responsavel.ativo) {
+      throw new ValidationError(
+        'O responsável informado não existe ou está inativo.',
+      );
+    }
+    responsavelNome = responsavel.nome;
+  }
+
+  etapa.responsavelId = input.responsavelId;
+  await etapa.save();
+
+  if (processo.processoEtapaAtualId === etapa.id) {
+    processo.responsavelAtualId = input.responsavelId;
+    await processo.save();
+  }
+
+  await registrarMovimentacao(
+    processo,
+    etapa.id,
+    'ALTERACAO',
+    responsavelNome
+      ? `Responsável da etapa "${etapa.nome}" definido como ${responsavelNome}.`
+      : `Responsável da etapa "${etapa.nome}" removido.`,
+    contexto,
+    {
+      etapaId: etapa.id,
+      etapaNome: etapa.nome,
+      responsavelId: input.responsavelId,
+      responsavelNome,
+    },
+  );
+  await auditoria.registrar(contexto, {
+    acao: 'ATRIBUIR',
+    recurso: 'processo',
+    recursoId: processoId,
+    metadados: {
+      ...identificarProcesso(processo),
+      etapaId: etapa.id,
+      etapaNome: etapa.nome,
+      responsavelId: input.responsavelId,
+      responsavelNome,
+    },
+  });
+  return detalhar(processoId);
 }
 
 export async function suspender(
@@ -676,6 +850,7 @@ export async function suspender(
     recurso: 'processo',
     recursoId: id,
     justificativa,
+    metadados: identificarProcesso(processo),
   });
   return detalhar(id);
 }
@@ -700,6 +875,7 @@ export async function retomar(
     acao: 'RETOMAR',
     recurso: 'processo',
     recursoId: id,
+    metadados: identificarProcesso(processo),
   });
   return detalhar(id);
 }
@@ -732,6 +908,7 @@ export async function encerrar(
     recurso: 'processo',
     recursoId: id,
     justificativa,
+    metadados: identificarProcesso(processo),
   });
   return detalhar(id);
 }

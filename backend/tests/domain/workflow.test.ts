@@ -7,6 +7,7 @@ import {
   podeTransicionarEtapa,
   podeTransicionarProcesso,
   processoTerminal,
+  proximaEtapaAposConclusao,
   proximaEtapaPendente,
 } from '../../src/domain/workflow.js';
 
@@ -98,5 +99,93 @@ describe('seleção de etapas', () => {
     expect(etapaConcluida(PROCESSO_ETAPA_STATUS.CONCLUIDA)).toBe(true);
     expect(etapaConcluida(PROCESSO_ETAPA_STATUS.PULADA)).toBe(true);
     expect(etapaConcluida(PROCESSO_ETAPA_STATUS.PENDENTE)).toBe(false);
+  });
+});
+
+describe('retorno após devolução', () => {
+  const etapas = [
+    {
+      id: 1,
+      sequencia: 1,
+      status: PROCESSO_ETAPA_STATUS.CONCLUIDA,
+      obrigatoria: true,
+      retornoParaEtapaId: null,
+    },
+    {
+      id: 2,
+      sequencia: 2,
+      status: PROCESSO_ETAPA_STATUS.EM_ANDAMENTO,
+      obrigatoria: true,
+      retornoParaEtapaId: 3,
+    },
+    {
+      id: 3,
+      sequencia: 3,
+      status: PROCESSO_ETAPA_STATUS.PENDENTE,
+      obrigatoria: true,
+      retornoParaEtapaId: null,
+    },
+    {
+      id: 4,
+      sequencia: 4,
+      status: PROCESSO_ETAPA_STATUS.PENDENTE,
+      obrigatoria: true,
+      retornoParaEtapaId: null,
+    },
+  ] as const;
+
+  it('retorna para a etapa que originou a devolução', () => {
+    const proxima = proximaEtapaAposConclusao([...etapas], etapas[1]);
+    expect(proxima?.id).toBe(3);
+  });
+
+  it('refaz as etapas intermediárias antes de voltar à origem', () => {
+    const comOrigemDistante = etapas.map((etapa) =>
+      etapa.id === 2
+        ? { ...etapa, retornoParaEtapaId: 4 }
+        : etapa,
+    );
+    const atual = comOrigemDistante[1];
+    const proxima = proximaEtapaAposConclusao(comOrigemDistante, atual);
+    expect(proxima?.id).toBe(3);
+
+    const intermediariaConcluida = comOrigemDistante.map((etapa) =>
+      etapa.id === 3
+        ? { ...etapa, status: PROCESSO_ETAPA_STATUS.CONCLUIDA }
+        : etapa,
+    );
+    const depois = proximaEtapaAposConclusao(
+      intermediariaConcluida,
+      intermediariaConcluida[2],
+    );
+    expect(depois?.id).toBe(4);
+  });
+
+  it('segue a ordem linear quando não há retorno pendente', () => {
+    const proxima = proximaEtapaAposConclusao([...etapas], etapas[0]);
+    expect(proxima?.id).toBe(2);
+  });
+
+  it('ignora retorno para etapa já finalizada', () => {
+    const proxima = proximaEtapaAposConclusao(
+      [
+        ...etapas,
+        {
+          id: 5,
+          sequencia: 5,
+          status: PROCESSO_ETAPA_STATUS.EM_ANDAMENTO,
+          obrigatoria: true,
+          retornoParaEtapaId: 1,
+        },
+      ],
+      {
+        id: 5,
+        sequencia: 5,
+        status: PROCESSO_ETAPA_STATUS.EM_ANDAMENTO,
+        obrigatoria: true,
+        retornoParaEtapaId: 1,
+      },
+    );
+    expect(proxima).toBeUndefined();
   });
 });

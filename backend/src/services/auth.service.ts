@@ -1,5 +1,8 @@
-import { AuthenticationError } from '../errors/app-error.js';
-import { normalizarEmail } from '../domain/normalization.js';
+import {
+  AuthenticationError,
+  ConflictError,
+} from '../errors/app-error.js';
+import { normalizarEmail, normalizarNome } from '../domain/normalization.js';
 import * as usuarioRepo from '../repositories/usuario.repository.js';
 import type { ContextoRequisicao } from '../types/context.js';
 import { assinarAccessToken } from '../utils/jwt.js';
@@ -125,6 +128,7 @@ export async function alterarSenha(
       recurso: 'usuario',
       recursoId: usuarioId,
       resultado: 'FALHA',
+      metadados: { nome: usuario.nome, email: usuario.email },
     });
     throw new AuthenticationError('Senha atual inválida.');
   }
@@ -138,5 +142,48 @@ export async function alterarSenha(
     recurso: 'usuario',
     recursoId: usuarioId,
     resultado: 'SUCESSO',
+    metadados: { nome: usuario.nome, email: usuario.email },
   });
+}
+
+/**
+ * Atualiza os dados pessoais do próprio usuário autenticado. Papéis, cargo e
+ * situação administrativa não podem ser alterados por esta via.
+ */
+export async function atualizarPerfil(
+  usuarioId: number,
+  input: { nome?: string; email?: string },
+  contexto: ContextoRequisicao,
+): Promise<PerfilUsuario> {
+  const usuario = await usuarioRepo.buscarPorId(usuarioId);
+  if (!usuario || !usuario.ativo) {
+    throw new AuthenticationError('Sessão inválida.');
+  }
+
+  if (input.email !== undefined) {
+    const email = normalizarEmail(input.email);
+    const existente = await usuarioRepo.buscarPorEmail(email);
+    if (existente && existente.id !== usuarioId) {
+      throw new ConflictError('Já existe um usuário com este e-mail.');
+    }
+    usuario.email = email;
+  }
+  if (input.nome !== undefined) {
+    usuario.nome = normalizarNome(input.nome);
+  }
+  await usuario.save();
+
+  await auditoria.registrar(contexto, {
+    acao: 'ALTERAR',
+    recurso: 'usuario',
+    recursoId: usuarioId,
+    metadados: {
+      nome: usuario.nome,
+      email: usuario.email,
+      campos: Object.keys(input),
+      origem: 'perfil',
+    },
+  });
+
+  return perfilAtual(usuarioId);
 }

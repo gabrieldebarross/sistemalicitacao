@@ -50,6 +50,24 @@ function formatarRotuloMetadado(chave: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
+/**
+ * Extrai do registro o nome legível do alvo afetado. O `recurso` informa o
+ * tipo de entidade; estes metadados informam qual registro específico.
+ */
+function alvoAuditoria(item: ItemAuditoria): string | null {
+  const metadados = item.metadados;
+  if (!metadados) {
+    return null;
+  }
+  for (const chave of ['nome', 'papel', 'usuario', 'numero']) {
+    const valor = metadados[chave];
+    if (typeof valor === 'string' && valor.trim().length > 0) {
+      return valor;
+    }
+  }
+  return null;
+}
+
 export default function AuditoriaPage() {
   const { temPermissao } = useSessao();
   const podeVer = temPermissao('audit.read');
@@ -236,7 +254,11 @@ export default function AuditoriaPage() {
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       {rotuloRecurso(item.recurso)}
-                      {item.recursoId ? ` #${item.recursoId}` : ''}
+                      {alvoAuditoria(item)
+                        ? ` · ${alvoAuditoria(item)}`
+                        : item.recursoId
+                          ? ` #${item.recursoId}`
+                          : ''}
                     </td>
                     <td className="px-4 py-3">
                       <Etiqueta
@@ -313,7 +335,7 @@ export default function AuditoriaPage() {
                   rotulo: 'Recurso',
                   valor: `${rotuloRecurso(detalhe.recurso)}${
                     detalhe.recursoId ? ` #${detalhe.recursoId}` : ''
-                  }`,
+                  }${alvoAuditoria(detalhe) ? ` — ${alvoAuditoria(detalhe)}` : ''}`,
                 },
                 { rotulo: 'Resultado', valor: detalhe.resultado },
                 {

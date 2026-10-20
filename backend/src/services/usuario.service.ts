@@ -148,6 +148,7 @@ export async function atualizar(
   input: {
     nome?: string;
     email?: string;
+    senha?: string;
     cargoId?: number | null;
     ativo?: boolean;
   },
@@ -174,6 +175,11 @@ export async function atualizar(
   if (input.ativo !== undefined) {
     usuario.ativo = input.ativo;
   }
+  if (input.senha !== undefined) {
+    usuario.senhaHash = await hashSenha(input.senha);
+    // Redefinição administrativa exige troca no próximo acesso.
+    usuario.senhaProvisoria = true;
+  }
   await usuario.save();
   await auditoria.registrar(contexto, {
     acao: 'ALTERAR',
@@ -183,6 +189,7 @@ export async function atualizar(
       nome: usuario.nome,
       email: usuario.email,
       campos: Object.keys(input),
+      senhaRedefinida: input.senha !== undefined,
     },
   });
   return buscarPorId(usuario.id);
@@ -234,6 +241,7 @@ export async function desativar(
     acao: 'DESATIVAR',
     recurso: 'usuario',
     recursoId: id,
+    metadados: { nome: usuario.nome, email: usuario.email },
   });
   return buscarPorId(id);
 }

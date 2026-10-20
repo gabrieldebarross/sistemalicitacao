@@ -10,6 +10,7 @@ import {
   ScrollText,
   Tag,
   ShieldCheck,
+  UserRound,
   Users,
   X,
 } from 'lucide-react';
@@ -67,6 +68,7 @@ const ITENS: ItemMenu[] = [
     permissao: 'audit.read',
     icone: ScrollText,
   },
+  { href: '/perfil', rotulo: 'Meu perfil', permissao: null, icone: UserRound },
 ];
 
 export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) {

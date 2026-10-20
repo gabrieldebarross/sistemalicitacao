@@ -32,6 +32,16 @@ export const alterarSenhaSchema = z.object({
     .max(128),
 });
 
+export const atualizarPerfilSchema = z
+  .object({
+    nome: textoObrigatorio(150).optional(),
+    email: z.string().trim().email('E-mail inválido.').max(180).optional(),
+  })
+  .refine(
+    (dados) => dados.nome !== undefined || dados.email !== undefined,
+    'Informe ao menos um campo para atualizar.',
+  );
+
 // ---------- Cargos ----------
 export const listarCargoQuerySchema = paginacaoSchema.extend({
   busca: textoOpcional(150),
@@ -93,6 +103,11 @@ export const criarUsuarioSchema = z.object({
 export const atualizarUsuarioSchema = z.object({
   nome: textoObrigatorio(150).optional(),
   email: z.string().trim().email('E-mail inválido.').max(180).optional(),
+  senha: z
+    .string()
+    .min(8, 'A senha deve ter ao menos 8 caracteres.')
+    .max(128)
+    .optional(),
   cargoId: z.coerce.number().int().positive().nullable().optional(),
   ativo: z.boolean().optional(),
 });
@@ -114,6 +129,9 @@ const situacaoFluxoSchema = z.enum(['RASCUNHO', 'PUBLICADO', 'ARQUIVADO']);
 export const listarFluxoQuerySchema = paginacaoSchema.extend({
   tipoProcessoId: z.coerce.number().int().positive().optional(),
   situacao: situacaoFluxoSchema.optional(),
+});
+export const listarFluxosDisponiveisQuerySchema = z.object({
+  tipoProcessoId: z.coerce.number().int().positive(),
 });
 export const criarFluxoSchema = z.object({
   tipoProcessoId: z.coerce.number().int().positive(),
@@ -172,11 +190,14 @@ export const listarProcessoQuerySchema = paginacaoSchema.extend({
 });
 export const criarProcessoSchema = z.object({
   numero: textoObrigatorio(50),
+  nome: textoObrigatorio(150).optional(),
   objeto: textoObrigatorio(500),
   descricao: textoOpcional(4000),
   tipoProcessoId: z.coerce.number().int().positive(),
+  fluxoId: z.coerce.number().int().positive().optional(),
 });
 export const atualizarProcessoSchema = z.object({
+  nome: textoObrigatorio(150).optional(),
   objeto: textoObrigatorio(500).optional(),
   descricao: z.string().trim().max(4000).nullable().optional(),
 });
@@ -190,6 +211,9 @@ export const devolverEtapaSchema = z.object({
 export const atribuirProcessoSchema = z.object({
   responsavelAtualId: z.coerce.number().int().positive().nullable().optional(),
   setorAtualId: z.coerce.number().int().positive().nullable().optional(),
+});
+export const atribuirEtapaSchema = z.object({
+  responsavelId: z.coerce.number().int().positive().nullable(),
 });
 export const justificativaSchema = z.object({
   justificativa: z.string().trim().min(5, 'Justificativa obrigatória.').max(2000),

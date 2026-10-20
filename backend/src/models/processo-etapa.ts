@@ -32,6 +32,7 @@ export class ProcessoEtapa extends Model<
   declare status: CreationOptional<ProcessoEtapaStatus>;
   declare responsavelId: ForeignKey<number | null>;
   declare setorId: ForeignKey<number | null>;
+  declare retornoParaEtapaId: CreationOptional<number | null>;
   declare prazoGestaoDias: CreationOptional<number | null>;
   declare dataInicio: CreationOptional<Date | null>;
   declare dataPrevista: CreationOptional<Date | null>;
@@ -75,6 +76,10 @@ ProcessoEtapa.init(
     },
     responsavelId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
     setorId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
+    retornoParaEtapaId: {
+      type: DataTypes.BIGINT.UNSIGNED,
+      allowNull: true,
+    },
     prazoGestaoDias: { type: DataTypes.INTEGER.UNSIGNED, allowNull: true },
     dataInicio: { type: DataTypes.DATE, allowNull: true },
     dataPrevista: { type: DataTypes.DATE, allowNull: true },

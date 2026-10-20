@@ -84,3 +84,42 @@ export function fluxoCompleto(etapas: readonly EtapaSequencial[]): boolean {
       etapa.status === PROCESSO_ETAPA_STATUS.PULADA,
   );
 }
+
+export interface EtapaComRetorno extends EtapaSequencial {
+  retornoParaEtapaId: number | null;
+}
+
+/**
+ * Define o destino após concluir uma etapa. Se a etapa havia sido devolvida,
+ * o fluxo refaz primeiro as etapas intermediárias reabertas e só então retorna
+ * para a etapa que originou a devolução. Sem devolução pendente, segue a
+ * próxima etapa não finalizada na ordem sequencial.
+ */
+export function proximaEtapaAposConclusao<T extends EtapaComRetorno>(
+  etapas: readonly T[],
+  atual: T,
+): T | undefined {
+  const retorno = atual.retornoParaEtapaId
+    ? etapas.find(
+        (etapa) =>
+          etapa.id === atual.retornoParaEtapaId &&
+          !etapaConcluida(etapa.status),
+      )
+    : undefined;
+
+  const proximaSequencial = [...etapas]
+    .filter(
+      (etapa) =>
+        etapa.sequencia > atual.sequencia && !etapaConcluida(etapa.status),
+    )
+    .sort((a, b) => a.sequencia - b.sequencia)[0];
+
+  if (
+    retorno &&
+    (!proximaSequencial ||
+      proximaSequencial.sequencia >= retorno.sequencia)
+  ) {
+    return retorno;
+  }
+  return proximaSequencial;
+}

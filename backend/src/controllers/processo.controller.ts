@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 
 import {
+  atribuirEtapaSchema,
   atribuirProcessoSchema,
   atualizarProcessoSchema,
   concluirEtapaSchema,
@@ -9,6 +10,7 @@ import {
   idParamSchema,
   justificativaSchema,
   listarProcessoQuerySchema,
+  listarFluxosDisponiveisQuerySchema,
   processoEtapaParamSchema,
 } from '../schemas/index.js';
 import * as processoService from '../services/processo.service.js';
@@ -19,6 +21,20 @@ import { validar } from '../utils/validation.js';
 export async function listar(req: Request, res: Response): Promise<void> {
   const query = validar(listarProcessoQuerySchema, req.query);
   responderPaginado(res, await processoService.listar(query));
+}
+
+export async function fluxosDisponiveis(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { tipoProcessoId } = validar(
+    listarFluxosDisponiveisQuerySchema,
+    req.query,
+  );
+  responderOk(
+    res,
+    await processoService.fluxosDisponiveis(tipoProcessoId),
+  );
 }
 
 export async function detalhar(req: Request, res: Response): Promise<void> {
@@ -89,6 +105,23 @@ export async function atribuir(req: Request, res: Response): Promise<void> {
   responderOk(
     res,
     await processoService.atribuir(id, dados, contextoDe(req, res)),
+  );
+}
+
+export async function atribuirEtapa(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { id, etapaId } = validar(processoEtapaParamSchema, req.params);
+  const dados = validar(atribuirEtapaSchema, req.body);
+  responderOk(
+    res,
+    await processoService.atribuirEtapa(
+      id,
+      etapaId,
+      dados,
+      contextoDe(req, res),
+    ),
   );
 }
 

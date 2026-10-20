@@ -97,6 +97,22 @@ export default function RolesPage() {
 
       {erro ? <AlertaErro mensagem={erro} /> : null}
 
+      <Cartao className="px-4 py-3 text-sm text-slate-600">
+        <p>
+          <strong className="text-slate-800">Como funciona:</strong>{' '}
+          <code className="rounded bg-slate-100 px-1 py-0.5 text-xs">
+            roles.manage
+          </code>{' '}
+          permite editar a descrição do papel e atribuir ou remover permissões.
+          A permissão{' '}
+          <code className="rounded bg-slate-100 px-1 py-0.5 text-xs">
+            permissions.manage
+          </code>{' '}
+          é um alias de compatibilidade para atribuir permissões; o catálogo de
+          permissões é definido pelo sistema e não é editável pela interface.
+        </p>
+      </Cartao>
+
       {carregando ? (
         <Carregando />
       ) : papels.length === 0 ? (

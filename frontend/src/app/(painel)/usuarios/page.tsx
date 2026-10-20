@@ -119,6 +119,7 @@ export default function UsuariosPage() {
           email: form.email,
           cargoId: form.cargoId ? Number(form.cargoId) : null,
           ativo: form.ativo,
+          ...(form.senha ? { senha: form.senha } : {}),
         });
       } else {
         await api.post('/usuarios', {
@@ -322,7 +323,8 @@ export default function UsuariosPage() {
                 salvando ||
                 !form?.nome.trim() ||
                 !form?.email.trim() ||
-                (!form?.id && form.senha.length < 8)
+                (!form?.id && form.senha.length < 8) ||
+                (!!form?.id && form.senha.length > 0 && form.senha.length < 8)
               }
               onClick={salvar}
             >
@@ -369,7 +371,23 @@ export default function UsuariosPage() {
                   }
                 />
               </Campo>
-            ) : null}
+            ) : (
+              <Campo
+                rotulo="Redefinir senha (opcional)"
+                htmlFor="usuario-senha"
+                dica="Mínimo de 8 caracteres. Ao redefinir, o usuário deverá alterá-la no próximo acesso."
+              >
+                <Entrada
+                  id="usuario-senha"
+                  type="password"
+                  autoComplete="new-password"
+                  value={form.senha}
+                  onChange={(evento) =>
+                    setForm({ ...form, senha: evento.target.value })
+                  }
+                />
+              </Campo>
+            )}
             <Campo rotulo="Cargo" htmlFor="usuario-cargo">
               <Selecao
                 id="usuario-cargo"

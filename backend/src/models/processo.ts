@@ -23,6 +23,7 @@ export class Processo extends Model<
 > {
   declare id: CreationOptional<number>;
   declare numero: string;
+  declare nome: string;
   declare objeto: string;
   declare descricao: CreationOptional<string | null>;
   declare tipoProcessoId: ForeignKey<number>;
@@ -52,6 +53,7 @@ Processo.init(
       primaryKey: true,
     },
     numero: { type: DataTypes.STRING(50), allowNull: false },
+    nome: { type: DataTypes.STRING(150), allowNull: false },
     objeto: { type: DataTypes.STRING(500), allowNull: false },
     descricao: { type: DataTypes.TEXT, allowNull: true },
     tipoProcessoId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: false },

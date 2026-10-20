@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 
 import {
   alterarSenhaSchema,
+  atualizarPerfilSchema,
   loginSchema,
 } from '../schemas/index.js';
 import * as authService from '../services/auth.service.js';
@@ -31,6 +32,19 @@ export function logout(_req: Request, res: Response): void {
 
 export async function me(req: Request, res: Response): Promise<void> {
   const perfil = await authService.perfilAtual(usuarioAutenticado(req));
+  responderOk(res, perfil);
+}
+
+export async function atualizarPerfil(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const dados = validar(atualizarPerfilSchema, req.body);
+  const perfil = await authService.atualizarPerfil(
+    usuarioAutenticado(req),
+    dados,
+    contextoDe(req, res),
+  );
   responderOk(res, perfil);
 }
 

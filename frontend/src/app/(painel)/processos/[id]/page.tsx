@@ -95,12 +95,15 @@ export default function ProcessoDetalhePage() {
 
   const [modal, setModal] = useState<ModalTipo | null>(null);
   const [etapaAlvo, setEtapaAlvo] = useState<number | null>(null);
+  const [etapaAtribuir, setEtapaAtribuir] = useState<number | null>(null);
   const [texto, setTexto] = useState('');
   const [paraEtapaId, setParaEtapaId] = useState('');
   const [setorId, setSetorId] = useState('');
   const [responsavelId, setResponsavelId] = useState('');
+  const [responsavelEtapaId, setResponsavelEtapaId] = useState('');
   const [setores, setSetores] = useState<Setor[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioAtribuivel[]>([]);
+  const [nome, setNome] = useState('');
   const [objeto, setObjeto] = useState('');
   const [descricao, setDescricao] = useState('');
 
@@ -142,6 +145,16 @@ export default function ProcessoDetalhePage() {
     setModal(novo);
   }
 
+  function carregarUsuarios() {
+    if (usuarios.length > 0) {
+      return;
+    }
+    api
+      .get<UsuarioAtribuivel[]>('/usuarios/atribuiveis')
+      .then((r) => setUsuarios(r.dados))
+      .catch(() => setUsuarios([]));
+  }
+
   function abrirAtribuir() {
     setSetorId(processo?.setorAtual ? String(processo.setorAtual.id) : '');
     setResponsavelId(
@@ -154,15 +167,17 @@ export default function ProcessoDetalhePage() {
         .then((r) => setSetores(r.dados))
         .catch(() => setSetores([]));
     }
-    if (usuarios.length === 0) {
-      api
-        .get<UsuarioAtribuivel[]>('/usuarios/atribuiveis')
-        .then((r) => setUsuarios(r.dados))
-        .catch(() => setUsuarios([]));
-    }
+    carregarUsuarios();
+  }
+
+  function abrirAtribuirEtapa(etapaId: number, responsavelAtualId: number | null) {
+    setEtapaAtribuir(etapaId);
+    setResponsavelEtapaId(responsavelAtualId ? String(responsavelAtualId) : '');
+    carregarUsuarios();
   }
 
   function abrirEditar() {
+    setNome(processo?.nome ?? '');
     setObjeto(processo?.objeto ?? '');
     setDescricao(processo?.descricao ?? '');
     setModal('editar');
@@ -181,6 +196,9 @@ export default function ProcessoDetalhePage() {
   const etapaAtual = processo.etapas.find(
     (etapa) => etapa.id === processo.etapaAtual?.id,
   );
+  const etapaEmAtribuicao = processo.etapas.find(
+    (etapa) => etapa.id === etapaAtribuir,
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -197,8 +215,9 @@ export default function ProcessoDetalhePage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-xl font-semibold text-slate-800">
-            {processo.numero}
+            {processo.nome || processo.numero}
           </h1>
+          <p className="text-sm text-slate-500">Nº {processo.numero}</p>
           <p className="max-w-2xl text-sm text-slate-600">{processo.objeto}</p>
           <div className="mt-2 flex items-center gap-2">
             <Etiqueta tom={TOM_STATUS[status] ?? 'neutro'}>
@@ -267,78 +286,109 @@ export default function ProcessoDetalhePage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Cartao className="lg:col-span-2">
           <CabecalhoCartao titulo="Etapas" />
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
-                <tr>
-                  <th className="px-4 py-2">#</th>
-                  <th className="px-4 py-2">Etapa</th>
-                  <th className="px-4 py-2">Situação</th>
-                  <th className="px-4 py-2">Responsável / setor</th>
-                  <th className="px-4 py-2">Prazo</th>
-                  <th className="px-4 py-2">Duração</th>
-                  <th className="px-4 py-2" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {processo.etapas.map((etapa) => (
-                  <tr
-                    key={etapa.id}
-                    className={cn(
-                      'hover:bg-slate-50',
-                      etapa.id === etapaAtual?.id && 'bg-sky-50/60',
-                    )}
-                  >
-                    <td className="px-4 py-3 text-slate-500">{etapa.sequencia}</td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-slate-800">{etapa.nome}</p>
+          <ol className="divide-y divide-slate-100">
+            {processo.etapas.map((etapa) => {
+              const ehAtual = etapa.id === etapaAtual?.id;
+              const podeConcluir =
+                ehAtual && temPermissao('processos.advance');
+              const temAnteriorConcluida = processo.etapas.some(
+                (anterior) =>
+                  anterior.sequencia < etapa.sequencia &&
+                  anterior.status === 'CONCLUIDA',
+              );
+              const podeDevolver =
+                ehAtual &&
+                temPermissao('processos.return') &&
+                temAnteriorConcluida;
+              const podeAtribuirEtapa =
+                !terminal &&
+                temPermissao('processos.assign') &&
+                !['CONCLUIDA', 'PULADA'].includes(etapa.status);
+              const retorno = etapa.retornoParaEtapaId
+                ? processo.etapas.find(
+                    (item) => item.id === etapa.retornoParaEtapaId,
+                  )
+                : null;
+
+              return (
+                <li
+                  key={etapa.id}
+                  className={cn('px-4 py-3', ehAtual && 'bg-sky-50/60')}
+                >
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                          {etapa.sequencia}
+                        </span>
+                        <p className="font-medium text-slate-800">
+                          {etapa.nome}
+                        </p>
+                        <Etiqueta tom={TOM_ETAPA[etapa.status] ?? 'neutro'}>
+                          {ROTULOS_STATUS_ETAPA[etapa.status] ?? etapa.status}
+                        </Etiqueta>
+                      </div>
                       {etapa.faseNome ? (
-                        <p className="text-xs text-slate-500">{etapa.faseNome}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {etapa.faseNome}
+                        </p>
                       ) : null}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Etiqueta tom={TOM_ETAPA[etapa.status] ?? 'neutro'}>
-                        {ROTULOS_STATUS_ETAPA[etapa.status] ?? etapa.status}
-                      </Etiqueta>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      <p>{etapa.responsavel?.nome ?? '—'}</p>
-                      <p className="text-xs text-slate-500">
-                        {etapa.setor?.nome ?? '—'}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {formatarData(etapa.dataPrevista)}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {duracaoEtapa(etapa.dataInicio, etapa.dataConclusao)}
-                    </td>
-                    <td className="px-4 py-3">
-                      {etapa.status === 'EM_ANDAMENTO' ? (
-                        <div className="flex justify-end gap-2">
-                          {temPermissao('processos.return') ? (
-                            <Botao
-                              variante="secundario"
-                              onClick={() => abrir('devolverEtapa', etapa.id)}
-                            >
-                              Devolver
-                            </Botao>
-                          ) : null}
-                          {temPermissao('processos.advance') ? (
-                            <Botao
-                              onClick={() => abrir('concluirEtapa', etapa.id)}
-                            >
-                              Concluir
-                            </Botao>
-                          ) : null}
-                        </div>
+                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                        <span>
+                          Responsável:{' '}
+                          <strong className="font-medium text-slate-700">
+                            {etapa.responsavel?.nome ?? '—'}
+                          </strong>
+                        </span>
+                        <span>Setor: {etapa.setor?.nome ?? '—'}</span>
+                        <span>Prazo: {formatarData(etapa.dataPrevista)}</span>
+                        <span>
+                          Duração:{' '}
+                          {duracaoEtapa(etapa.dataInicio, etapa.dataConclusao)}
+                        </span>
+                      </div>
+                      {retorno ? (
+                        <p className="mt-1 text-xs text-sky-800">
+                          Após concluir, o processo retorna para a etapa{' '}
+                          {retorno.sequencia}. {retorno.nome}.
+                        </p>
                       ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 lg:justify-end">
+                      {podeAtribuirEtapa ? (
+                        <Botao
+                          variante="secundario"
+                          onClick={() =>
+                            abrirAtribuirEtapa(
+                              etapa.id,
+                              etapa.responsavel?.id ?? null,
+                            )
+                          }
+                        >
+                          Atribuir
+                        </Botao>
+                      ) : null}
+                      {podeDevolver ? (
+                        <Botao
+                          variante="secundario"
+                          onClick={() => abrir('devolverEtapa', etapa.id)}
+                        >
+                          Devolver
+                        </Botao>
+                      ) : null}
+                      {podeConcluir ? (
+                        <Botao
+                          onClick={() => abrir('concluirEtapa', etapa.id)}
+                        >
+                          Concluir
+                        </Botao>
+                      ) : null}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
         </Cartao>
 
         <Cartao>
@@ -470,6 +520,10 @@ export default function ProcessoDetalhePage() {
         }
       >
         <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-600">
+            Ao concluir novamente a etapa de destino, o processo retornará
+            automaticamente para a etapa que fez a devolução.
+          </p>
           <Campo rotulo="Motivo" htmlFor="motivo" obrigatorio>
             <AreaTexto
               id="motivo"
@@ -565,6 +619,70 @@ export default function ProcessoDetalhePage() {
       </Modal>
 
       <Modal
+        aberto={etapaAtribuir !== null}
+        titulo={
+          etapaEmAtribuicao
+            ? `Atribuir responsável — ${etapaEmAtribuicao.nome}`
+            : 'Atribuir responsável à etapa'
+        }
+        aoFechar={() => setEtapaAtribuir(null)}
+        rodape={
+          <>
+            <Botao
+              variante="secundario"
+              onClick={() => setEtapaAtribuir(null)}
+            >
+              Cancelar
+            </Botao>
+            <Botao
+              disabled={processando}
+              onClick={() =>
+                executar(() =>
+                  api.post(
+                    `/processos/${id}/etapas/${etapaAtribuir}/atribuir`,
+                    {
+                      responsavelId: responsavelEtapaId
+                        ? Number(responsavelEtapaId)
+                        : null,
+                    },
+                  ),
+                )
+              }
+            >
+              Salvar
+            </Botao>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-600">
+            A atribuição vale apenas para esta etapa e não altera as demais.
+          </p>
+          <Campo
+            rotulo="Responsável"
+            htmlFor="responsavel-etapa"
+            dica="Deixe em branco para remover o responsável desta etapa."
+          >
+            <Selecao
+              id="responsavel-etapa"
+              value={responsavelEtapaId}
+              onChange={(evento) =>
+                setResponsavelEtapaId(evento.target.value)
+              }
+            >
+              <option value="">Sem responsável</option>
+              {usuarios.map((usuario) => (
+                <option key={usuario.id} value={usuario.id}>
+                  {usuario.nome}
+                  {usuario.cargo ? ` — ${usuario.cargo}` : ''}
+                </option>
+              ))}
+            </Selecao>
+          </Campo>
+        </div>
+      </Modal>
+
+      <Modal
         aberto={modal === 'retomar'}
         titulo="Retomar processo"
         aoFechar={() => setModal(null)}
@@ -600,10 +718,15 @@ export default function ProcessoDetalhePage() {
               Cancelar
             </Botao>
             <Botao
-              disabled={processando || objeto.trim().length === 0}
+              disabled={
+                processando ||
+                nome.trim().length === 0 ||
+                objeto.trim().length === 0
+              }
               onClick={() =>
                 executar(() =>
                   api.patch(`/processos/${id}`, {
+                    nome,
                     objeto,
                     descricao: descricao.trim() ? descricao : null,
                   }),
@@ -616,6 +739,13 @@ export default function ProcessoDetalhePage() {
         }
       >
         <div className="flex flex-col gap-4">
+          <Campo rotulo="Nome do processo" htmlFor="nome" obrigatorio>
+            <Entrada
+              id="nome"
+              value={nome}
+              onChange={(evento) => setNome(evento.target.value)}
+            />
+          </Campo>
           <Campo rotulo="Objeto" htmlFor="objeto" obrigatorio>
             <Entrada
               id="objeto"

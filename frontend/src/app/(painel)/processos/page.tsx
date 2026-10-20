@@ -91,7 +91,7 @@ export default function ProcessosPage() {
       <Cartao>
         <div className="flex flex-wrap gap-3 border-b border-slate-200 px-4 py-3">
           <Entrada
-            placeholder="Buscar por número ou objeto"
+            placeholder="Buscar por nome, número ou objeto"
             aria-label="Buscar processos"
             value={busca}
             onChange={(evento) => {
@@ -150,7 +150,7 @@ export default function ProcessosPage() {
             <table className="w-full text-left text-sm">
               <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
                 <tr>
-                  <th className="px-4 py-2">Número</th>
+                  <th className="px-4 py-2">Processo</th>
                   <th className="px-4 py-2">Objeto</th>
                   <th className="px-4 py-2">Situação</th>
                   <th className="px-4 py-2">Etapa atual</th>
@@ -165,8 +165,11 @@ export default function ProcessosPage() {
                         href={`/processos/${processo.id}`}
                         className="font-medium text-sky-800 hover:underline"
                       >
-                        {processo.numero}
+                        {processo.nome || processo.numero}
                       </Link>
+                      <p className="text-xs text-slate-500">
+                        Nº {processo.numero}
+                      </p>
                     </td>
                     <td className="max-w-sm px-4 py-3 text-slate-700">
                       {processo.objeto}

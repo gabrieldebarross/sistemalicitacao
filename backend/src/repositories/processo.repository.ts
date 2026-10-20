@@ -12,6 +12,7 @@ import { Usuario } from '../models/usuario.js';
 
 export interface CriarProcesso {
   numero: string;
+  nome: string;
   objeto: string;
   descricao: string | null;
   tipoProcessoId: number;
@@ -97,6 +98,7 @@ export async function listar(
     where = {
       ...where,
       [Op.or]: [
+        { nome: { [Op.like]: `%${filtro.busca}%` } },
         { numero: { [Op.like]: `%${filtro.busca}%` } },
         { objeto: { [Op.like]: `%${filtro.busca}%` } },
       ],
@@ -156,6 +158,7 @@ export async function atualizarEtapa(
     dataPrevista?: Date | null;
     dataConclusao?: Date | null;
     motivoBloqueio?: string | null;
+    retornoParaEtapaId?: number | null;
   },
 ): Promise<ProcessoEtapa> {
   return etapa.update(dados);

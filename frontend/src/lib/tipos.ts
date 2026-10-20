@@ -6,6 +6,7 @@ export interface Referencia {
 export interface ProcessoResumo {
   id: number;
   numero: string;
+  nome: string;
   objeto: string;
   status: string;
   tipoProcesso: Referencia | null;
@@ -29,6 +30,7 @@ export interface ProcessoEtapa {
   dataPrevista: string | null;
   dataConclusao: string | null;
   motivoBloqueio: string | null;
+  retornoParaEtapaId: number | null;
   responsavel: Referencia | null;
   setor: Referencia | null;
 }
@@ -94,6 +96,13 @@ export interface FluxoResumo {
   versao: number;
   situacao: string;
   publicadoEm: string | null;
+}
+
+/** Fluxo publicado disponível para escolha na criação de processo. */
+export interface FluxoDisponivel {
+  id: number;
+  nome: string;
+  versao: number;
 }
 
 export interface Cargo {

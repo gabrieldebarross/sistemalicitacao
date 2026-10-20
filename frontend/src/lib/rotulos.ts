@@ -68,6 +68,9 @@ export const ACOES_AUDITORIA: Record<string, string> = {
   REMOVER_ETAPA: 'Remoção de etapa',
   ENCERRAR: 'Encerramento',
   CANCELAR: 'Cancelamento',
+  CONCLUIDO: 'Conclusão do processo',
+  ANULADO: 'Anulação do processo',
+  REVOGADO: 'Revogação do processo',
 };
 
 export const RECURSOS_AUDITORIA: Record<string, string> = {
