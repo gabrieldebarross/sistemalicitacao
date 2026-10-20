@@ -60,6 +60,16 @@ export class ConflictError extends AppError {
   }
 }
 
+/** Sessão válida, mas o usuário deve trocar a senha antes de continuar. */
+export class PasswordChangeRequiredError extends AppError {
+  constructor(
+    message = 'É necessário alterar a senha provisória antes de continuar.',
+    detalhes?: AppErrorDetalhes,
+  ) {
+    super(message, 403, 'TROCA_SENHA_OBRIGATORIA', detalhes);
+  }
+}
+
 export class IntegrityError extends AppError {
   constructor(
     message = 'Violação de integridade de dados.',
@@ -75,5 +85,17 @@ export class UnexpectedError extends AppError {
     detalhes?: AppErrorDetalhes,
   ) {
     super(message, 500, 'ERRO_INTERNO', detalhes);
+  }
+}
+
+export class RateLimitError extends AppError {
+  constructor(message = 'Muitas tentativas. Tente novamente mais tarde.') {
+    super(message, 429, 'RATE_LIMIT');
+  }
+}
+
+export class CsrfError extends AppError {
+  constructor(message = 'Requisição inválida.') {
+    super(message, 403, 'CSRF');
   }
 }

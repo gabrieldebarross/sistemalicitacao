@@ -33,10 +33,12 @@ sistema_licitacao/
 ├── .env.example         # modelo de variáveis (sem valores reais)
 ├── docs/                # documentação (arquitetura, domínio, RBAC, workflows...)
 ├── .opencode/skills/    # skills especializadas
-└── backend/             # API (Node.js + TypeScript + Express + Sequelize + MySQL)
-    ├── src/
-    ├── database/        # migrations e seeders
-    └── tests/
+├── backend/             # API (Node.js + TypeScript + Express + Sequelize + MySQL)
+│   ├── src/
+│   ├── database/        # migrations e seeders
+│   └── tests/
+└── frontend/            # interface (Next.js App Router + React + Tailwind)
+    └── src/
 ```
 
 ## Requisitos
@@ -66,6 +68,43 @@ caracteres).
 | `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` | Conexão MySQL |
 | `JWT_SECRET`, `JWT_EXPIRES_IN` | Autenticação |
 | `LOG_LEVEL` | `debug` \| `info` \| `warn` \| `error` |
+| `ADMIN_NOME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Bootstrap opcional do administrador (apenas pelo seeder) |
+| `SEED_DEMO_*` | Usuário de exemplo e processos de demonstração (apenas pelo seeder; opcional) |
+
+> **Bootstrap do administrador.** Nenhum papel recebe permissões por padrão
+> (negar por padrão). Para criar o administrador inicial, defina `ADMIN_EMAIL` e
+> `ADMIN_PASSWORD` (mínimo de 8 caracteres) e rode `pnpm -C backend db:seed:all`.
+> O seeder é idempotente e cria o papel `Administrador` com todas as permissões,
+> vinculando o usuário informado. Sem essas variáveis, nada é concedido.
+
+> **Dados padrão e de exemplo.** `db:seed:all` cria os cadastros de referência
+> (tipos de processo, cargos, papéis, permissões e um conjunto inicial de
+> setores) e um **fluxo padrão por tipo de processo** baseado na Lei nº
+> 14.133/2021 (ver `docs/workflows.md`), sempre editável. Opcionalmente, um
+> usuário de exemplo é criado quando `SEED_DEMO_EMAIL`/`SEED_DEMO_PASSWORD` estão
+> definidos. Nenhuma senha fica no código. Os **processos são criados pela
+> interface** enquanto o sistema roda — não há seed de processos fictícios.
+
+## Frontend (Next.js)
+
+O frontend fica em `frontend/` e consome a API em `NEXT_PUBLIC_API_URL`
+(padrão `http://localhost:3000/api`). A autenticação usa cookies `HttpOnly`
+(`sl_token`) e CSRF double-submit (`sl_csrf` + header `x-csrf-token`).
+
+> **Primeiro acesso.** Usuários criados pela tela de usuários recebem senha
+> provisória e precisam definir uma nova senha antes de acessar qualquer recurso.
+> A exigência é aplicada no frontend e verificada também no backend.
+
+Configure a origem permitida no backend via `CORS_ORIGIN`
+(padrão `http://localhost:3001`, que é a porta do frontend).
+
+```bash
+pnpm -C frontend dev        # desenvolvimento em http://localhost:3001
+pnpm -C frontend build      # build de produção
+pnpm -C frontend start      # inicia o build
+pnpm -C frontend typecheck  # verificação de tipos
+pnpm -C frontend lint       # ESLint
+```
 
 ## Banco de dados (desenvolvimento)
 
@@ -102,9 +141,13 @@ pnpm -C backend build        # compilação (tsc / TypeScript 7)
 pnpm -C backend typecheck    # verificação de tipos
 pnpm -C backend lint         # ESLint
 pnpm -C backend test         # testes (Vitest)
+
+# frontend
+pnpm -C frontend dev         # interface em http://localhost:3001
+pnpm -C frontend build       # build de produção
 ```
 
-Endpoints iniciais:
+Endpoints de saúde:
 
 - `GET /api/health` — liveness;
 - `GET /api/health/readiness` — verifica o banco de dados.

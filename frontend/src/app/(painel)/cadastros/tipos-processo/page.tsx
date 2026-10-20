@@ -1,0 +1,277 @@
+'use client';
+
+import { Plus } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+
+import {
+  AlertaErro,
+  AreaTexto,
+  Botao,
+  Campo,
+  Carregando,
+  Cartao,
+  Entrada,
+  Etiqueta,
+  EstadoVazio,
+  Modal,
+} from '@/components/ui';
+import { api, mensagemDeErro, type Paginacao } from '@/lib/api';
+import { useSessao } from '@/lib/session';
+import type { TipoProcesso } from '@/lib/tipos';
+
+interface Formulario {
+  id: number | null;
+  nome: string;
+  descricao: string;
+  baseLegal: string;
+  ativo: boolean;
+}
+
+const VAZIO: Formulario = {
+  id: null,
+  nome: '',
+  descricao: '',
+  baseLegal: '',
+  ativo: true,
+};
+
+export default function TiposProcessoPage() {
+  const { temPermissao } = useSessao();
+  const podeEditar = temPermissao('tipos-processo.manage');
+  const [itens, setItens] = useState<TipoProcesso[]>([]);
+  const [paginacao, setPaginacao] = useState<Paginacao | null>(null);
+  const [busca, setBusca] = useState('');
+  const [pagina, setPagina] = useState(1);
+  const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState('');
+  const [form, setForm] = useState<Formulario | null>(null);
+  const [salvando, setSalvando] = useState(false);
+
+  const carregar = useCallback(async () => {
+    setCarregando(true);
+    setErro('');
+    const params = new URLSearchParams({ pagina: String(pagina), tamanhoPagina: '10' });
+    if (busca) params.set('busca', busca);
+    try {
+      const resposta = await api.get<TipoProcesso[]>(`/tipos-processo?${params}`);
+      setItens(resposta.dados);
+      setPaginacao(resposta.paginacao ?? null);
+    } catch (falha) {
+      setErro(mensagemDeErro(falha));
+    } finally {
+      setCarregando(false);
+    }
+  }, [pagina, busca]);
+
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
+
+  async function salvar() {
+    if (!form) return;
+    setSalvando(true);
+    setErro('');
+    try {
+      const dados = {
+        nome: form.nome,
+        descricao: form.descricao || undefined,
+        baseLegal: form.baseLegal || undefined,
+        ativo: form.ativo,
+      };
+      if (form.id) {
+        await api.patch(`/tipos-processo/${form.id}`, dados);
+      } else {
+        await api.post('/tipos-processo', dados);
+      }
+      setForm(null);
+      await carregar();
+    } catch (falha) {
+      setErro(mensagemDeErro(falha));
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-800">
+            Tipos de processo
+          </h1>
+          <p className="text-sm text-slate-500">
+            Categorias de contratação da autarquia.
+          </p>
+        </div>
+        {podeEditar ? (
+          <Botao onClick={() => setForm({ ...VAZIO })}>
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Novo tipo
+          </Botao>
+        ) : null}
+      </div>
+
+      <Cartao>
+        <div className="border-b border-slate-200 px-4 py-3">
+          <Entrada
+            placeholder="Buscar por nome"
+            aria-label="Buscar tipos"
+            value={busca}
+            onChange={(evento) => {
+              setBusca(evento.target.value);
+              setPagina(1);
+            }}
+            className="max-w-xs"
+          />
+        </div>
+
+        {erro ? (
+          <div className="px-4 py-4">
+            <AlertaErro mensagem={erro} />
+          </div>
+        ) : carregando ? (
+          <Carregando />
+        ) : itens.length === 0 ? (
+          <EstadoVazio titulo="Nenhum tipo cadastrado" />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
+                <tr>
+                  <th className="px-4 py-2">Nome</th>
+                  <th className="px-4 py-2">Base normativa</th>
+                  <th className="px-4 py-2">Situação</th>
+                  <th className="px-4 py-2" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {itens.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50">
+                    <td className="px-4 py-3 font-medium text-slate-800">
+                      {item.nome}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
+                      {item.baseLegal ?? '—'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <Etiqueta tom={item.ativo ? 'sucesso' : 'neutro'}>
+                        {item.ativo ? 'Ativo' : 'Inativo'}
+                      </Etiqueta>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {podeEditar ? (
+                        <Botao
+                          variante="secundario"
+                          onClick={() =>
+                            setForm({
+                              id: item.id,
+                              nome: item.nome,
+                              descricao: item.descricao ?? '',
+                              baseLegal: item.baseLegal ?? '',
+                              ativo: item.ativo,
+                            })
+                          }
+                        >
+                          Editar
+                        </Botao>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {paginacao && paginacao.totalPaginas > 1 ? (
+          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm">
+            <span className="text-slate-500">
+              Página {paginacao.pagina} de {paginacao.totalPaginas}
+            </span>
+            <div className="flex gap-2">
+              <Botao
+                variante="secundario"
+                disabled={paginacao.pagina <= 1}
+                onClick={() => setPagina((valor) => Math.max(1, valor - 1))}
+              >
+                Anterior
+              </Botao>
+              <Botao
+                variante="secundario"
+                disabled={paginacao.pagina >= paginacao.totalPaginas}
+                onClick={() => setPagina((valor) => valor + 1)}
+              >
+                Próxima
+              </Botao>
+            </div>
+          </div>
+        ) : null}
+      </Cartao>
+
+      <Modal
+        aberto={form !== null}
+        titulo={form?.id ? 'Editar tipo de processo' : 'Novo tipo de processo'}
+        aoFechar={() => setForm(null)}
+        rodape={
+          <>
+            <Botao variante="secundario" onClick={() => setForm(null)}>
+              Cancelar
+            </Botao>
+            <Botao
+              disabled={salvando || !form?.nome.trim()}
+              onClick={salvar}
+            >
+              Salvar
+            </Botao>
+          </>
+        }
+      >
+        {form ? (
+          <div className="flex flex-col gap-4">
+            <Campo rotulo="Nome" htmlFor="tipo-nome" obrigatorio>
+              <Entrada
+                id="tipo-nome"
+                value={form.nome}
+                onChange={(evento) =>
+                  setForm({ ...form, nome: evento.target.value })
+                }
+              />
+            </Campo>
+            <Campo rotulo="Descrição" htmlFor="tipo-descricao">
+              <AreaTexto
+                id="tipo-descricao"
+                value={form.descricao}
+                onChange={(evento) =>
+                  setForm({ ...form, descricao: evento.target.value })
+                }
+              />
+            </Campo>
+            <Campo
+              rotulo="Base normativa"
+              htmlFor="tipo-base"
+              dica="Use apenas referências verificadas (ex.: Lei nº 14.133/2021)."
+            >
+              <Entrada
+                id="tipo-base"
+                value={form.baseLegal}
+                onChange={(evento) =>
+                  setForm({ ...form, baseLegal: evento.target.value })
+                }
+              />
+            </Campo>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={form.ativo}
+                onChange={(evento) =>
+                  setForm({ ...form, ativo: evento.target.checked })
+                }
+              />
+              Ativo
+            </label>
+          </div>
+        ) : null}
+      </Modal>
+    </div>
+  );
+}

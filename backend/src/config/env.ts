@@ -31,7 +31,7 @@ const envSchema = z.object({
   DB_DIALECT: z.literal('mysql').default('mysql'),
 
   JWT_SECRET: z.string().optional(),
-  JWT_EXPIRES_IN: z.string().default('15m'),
+  JWT_EXPIRES_IN: z.string().default('8h'),
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
 });
 

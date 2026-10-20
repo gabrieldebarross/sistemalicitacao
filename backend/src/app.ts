@@ -2,6 +2,8 @@ import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 
+// Efeito colateral: inicializa os modelos Sequelize e suas associações.
+import './models/index.js';
 import { env } from './config/env.js';
 import { errorHandler } from './middlewares/error-handler.js';
 import { notFoundHandler } from './middlewares/not-found-handler.js';

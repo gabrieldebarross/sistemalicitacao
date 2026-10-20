@@ -98,6 +98,39 @@ homologação), com fases preliminares internas de gestão quando fizer sentido:
 São **modelos administrativos configuráveis**, sujeitos a validação jurídica antes
 de uso oficial. Não representar como sequência universalmente obrigatória por lei.
 
+## Fluxos padrão semeados
+
+O seeder `20260101000007-seed-fluxos-padrao.cjs` cria, para cada tipo de processo,
+um fluxo **PUBLICADO** chamado `Fluxo padrão (Lei nº 14.133/2021)`, **editável e
+clonável** (a administração pode criar fluxos personalizados). Nesta versão, os
+prazos de gestão ficam nulos (a lei fixa prazos legais, não prazos internos) e o
+responsável por setor/cargo não é definido (decisão administrativa). Seeder
+idempotente: não recria o padrão se ele já existir para o tipo.
+
+**Modalidades de licitação** (Pregão Eletrônico, Concorrência, Concurso, Leilão,
+Diálogo Competitivo) — fases do art. 17 e etapas citadas:
+
+| Fase | Etapas (referência) |
+| --- | --- |
+| Preparatória | ETP (art. 18, I); definição do objeto (art. 18, II); orçamento estimado (art. 18, IV); elaboração do edital (art. 18, V); análise de riscos (art. 18, X); parecer jurídico (art. 53) |
+| Divulgação do edital | Publicação no PNCP (art. 17, II e art. 54) |
+| Apresentação de propostas e lances | Sessão pública (art. 17, III e § 2º) |
+| Julgamento | Julgamento das propostas (art. 17, IV) |
+| Habilitação | Habilitação dos licitantes (art. 17, V) |
+| Recursal | Fase recursal (art. 17, VI) |
+| Homologação | Adjudicação e homologação (art. 17, VII e art. 71, IV) |
+
+**Contratação direta** (Dispensa e Inexigibilidade de Licitação) — instrução do
+art. 72:
+
+| Fase | Etapas (referência) |
+| --- | --- |
+| Instrução do processo | Formalização da demanda/ETP/TR (art. 72, I); estimativa de despesa (art. 72, II); pareceres jurídico e técnicos (art. 72, III); compatibilidade orçamentária (art. 72, IV); habilitação e qualificação (art. 72, V); razão da escolha (art. 72, VI); justificativa de preço (art. 72, VII); autorização (art. 72, VIII) |
+| Divulgação | Divulgação do ato de autorização/extrato (art. 72, parágrafo único) |
+
+> Continua sendo **modelo administrativo** sujeito a validação jurídica. O sistema
+> não substitui análise jurídica nem afirma conformidade legal.
+
 ## Pendências
 
 - Fontes oficiais e dispositivos legais (não inventar) — validar com responsáveis.

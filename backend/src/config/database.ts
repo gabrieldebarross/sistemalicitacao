@@ -15,6 +15,10 @@ export const sequelize = new Sequelize(
     port: env.db.port,
     dialect: env.db.dialect,
     logging: false,
+    dialectOptions: {
+      supportBigNumbers: true,
+      bigNumberStrings: false,
+    },
     define: {
       underscored: true,
       timestamps: true,
