@@ -1,4 +1,4 @@
-# Arquitetura — Sistema de Gestão de Licitações
+# Arquitetura — TramitaY
 
 > Documento inicial (Fase 0). Detalhamento completo na Fase 1.
 

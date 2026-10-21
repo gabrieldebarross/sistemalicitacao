@@ -6,7 +6,6 @@
  */
 import { Auditoria } from './auditoria.js';
 import { Cargo } from './cargo.js';
-import { Delegacao } from './delegacao.js';
 import { Etapa } from './etapa.js';
 import { Fase } from './fase.js';
 import { Fluxo } from './fluxo.js';
@@ -153,27 +152,9 @@ UserSectorAssignment.belongsTo(Setor, {
   as: 'setor',
 });
 
-// Visões salvas, delegações e sessões
+// Visões salvas e sessões
 Usuario.hasMany(VisaoSalva, { foreignKey: 'usuarioId', as: 'visoesSalvas' });
 VisaoSalva.belongsTo(Usuario, { foreignKey: 'usuarioId', as: 'usuario' });
-
-Usuario.hasMany(Delegacao, {
-  foreignKey: 'origemUsuarioId',
-  as: 'delegacoesOrigem',
-});
-Usuario.hasMany(Delegacao, {
-  foreignKey: 'destinoUsuarioId',
-  as: 'delegacoesDestino',
-});
-Delegacao.belongsTo(Usuario, {
-  foreignKey: 'origemUsuarioId',
-  as: 'origem',
-});
-Delegacao.belongsTo(Usuario, {
-  foreignKey: 'destinoUsuarioId',
-  as: 'destino',
-});
-Delegacao.belongsTo(Processo, { foreignKey: 'processoId', as: 'processo' });
 
 Usuario.hasMany(Sessao, { foreignKey: 'usuarioId', as: 'sessoes' });
 Sessao.belongsTo(Usuario, { foreignKey: 'usuarioId', as: 'usuario' });
@@ -214,7 +195,6 @@ export const models = {
   Movimentacao,
   Auditoria,
   VisaoSalva,
-  Delegacao,
   Sessao,
   SenhaHistorico,
   MfaCodigoRecuperacao,
@@ -223,7 +203,6 @@ export const models = {
 export {
   Auditoria,
   Cargo,
-  Delegacao,
   Etapa,
   Fase,
   Fluxo,

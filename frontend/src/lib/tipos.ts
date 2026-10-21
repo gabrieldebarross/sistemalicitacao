@@ -220,7 +220,6 @@ export interface Tarefa {
   };
   responsavel: Referencia | null;
   setor: Referencia | null;
-  delegacao: { id: number; origem: Referencia | null } | null;
   atrasada: boolean;
   diasAtraso: number | null;
   proximaAcao: 'INICIAR' | 'CONCLUIR' | 'DESBLOQUEAR';
@@ -240,19 +239,6 @@ export interface VisaoSalva {
   filtros: Record<string, unknown>;
   criadoEm: string;
   atualizadoEm: string;
-}
-
-export interface Delegacao {
-  id: number;
-  origem: Referencia | null;
-  destino: Referencia | null;
-  processo: { id: number; numero: string; nome: string } | null;
-  inicioEm: string;
-  fimEm: string;
-  motivo: string;
-  canceladoEm: string | null;
-  ativa: boolean;
-  criadoEm: string;
 }
 
 export interface SessaoUsuario {

@@ -1,6 +1,4 @@
-import type { Delegacao } from '../models/delegacao.js';
 import type { ProcessoEtapaStatus } from '../domain/enums.js';
-import * as delegacaoRepo from '../repositories/delegacao.repository.js';
 import * as tarefaRepo from '../repositories/tarefa.repository.js';
 import type { ResultadoPaginado } from '../utils/http.js';
 import { resolverPaginacao } from '../utils/pagination.js';
@@ -24,10 +22,6 @@ export interface TarefaDTO {
   };
   responsavel: { id: number; nome: string } | null;
   setor: { id: number; nome: string } | null;
-  delegacao: {
-    id: number;
-    origem: { id: number; nome: string } | null;
-  } | null;
   atrasada: boolean;
   diasAtraso: number | null;
   proximaAcao: 'INICIAR' | 'CONCLUIR' | 'DESBLOQUEAR';
@@ -63,30 +57,11 @@ function mesmoDia(a: Date, b: Date): boolean {
   );
 }
 
-function chaveDelegacao(origemId: number, processoId: number | null): string {
-  return `${origemId}:${processoId ?? '*'}`;
-}
-
 async function coletar(
   usuarioId: number,
 ): Promise<{ itens: TarefaDTO[]; resumo: ResumoTarefas }> {
   const agora = new Date();
-  const delegacoes = await delegacaoRepo.listarAtivasParaDestino(
-    usuarioId,
-    agora,
-  );
-  const mapaDelegacoes = new Map<string, Delegacao>();
-  for (const delegacao of delegacoes) {
-    mapaDelegacoes.set(
-      chaveDelegacao(delegacao.origemUsuarioId, delegacao.processoId),
-      delegacao,
-    );
-  }
-  const responsaveis = new Set<number>([usuarioId]);
-  for (const delegacao of delegacoes) {
-    responsaveis.add(delegacao.origemUsuarioId);
-  }
-  const registros = await tarefaRepo.listarCandidatas([...responsaveis]);
+  const registros = await tarefaRepo.listarCandidatas([usuarioId]);
 
   const itens: TarefaDTO[] = [];
   for (const registro of registros) {
@@ -99,19 +74,8 @@ async function coletar(
     ) {
       continue;
     }
-    const responsavelId = etapa.responsavelId;
-    if (responsavelId === null) {
+    if (etapa.responsavelId !== usuarioId) {
       continue;
-    }
-    let delegacao: Delegacao | null = null;
-    if (responsavelId !== usuarioId) {
-      delegacao =
-        mapaDelegacoes.get(chaveDelegacao(responsavelId, processo.id)) ??
-        mapaDelegacoes.get(chaveDelegacao(responsavelId, null)) ??
-        null;
-      if (!delegacao) {
-        continue;
-      }
     }
 
     const dataPrevista = etapa.dataPrevista;
@@ -152,14 +116,6 @@ async function coletar(
         : null,
       setor: etapa.setor
         ? { id: etapa.setor.id, nome: etapa.setor.nome }
-        : null,
-      delegacao: delegacao
-        ? {
-            id: delegacao.id,
-            origem: delegacao.origem
-              ? { id: delegacao.origem.id, nome: delegacao.origem.nome }
-              : { id: responsavelId, nome: 'Usuário' },
-          }
         : null,
       atrasada,
       diasAtraso,

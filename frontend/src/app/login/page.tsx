@@ -1,9 +1,10 @@
 'use client';
 
-import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, KeyRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { MarcaTramitaY } from '@/components/brand';
 import {
   AlertaErro,
   AlertaSucesso,
@@ -11,7 +12,7 @@ import {
   Campo,
   Entrada,
 } from '@/components/ui';
-import { api, mensagemDeErro } from '@/lib/api';
+import { ApiError, api, mensagemDeErro } from '@/lib/api';
 import { useSessao, type Perfil } from '@/lib/session';
 import type { ConfiguracaoMfa } from '@/lib/tipos';
 
@@ -38,6 +39,14 @@ export default function LoginPage() {
     }
     router.replace(perfil.senhaProvisoria ? '/trocar-senha' : '/painel');
   }, [carregando, perfil, router]);
+
+  useEffect(() => {
+    const parametros = new URLSearchParams(window.location.search);
+    if (parametros.get('motivo') === 'sessao-expirada') {
+      setErro('Sua sessão foi encerrada. Entre novamente para continuar.');
+      window.history.replaceState({}, '', '/login');
+    }
+  }, []);
 
   function irParaPosLogin(perfilAtual: Perfil) {
     router.replace(perfilAtual.senhaProvisoria ? '/trocar-senha' : '/painel');
@@ -70,6 +79,15 @@ export default function LoginPage() {
     }
   }
 
+  function encerrarDesafioMfa(mensagem: string) {
+    setEtapa('credenciais');
+    setCodigo('');
+    setSenha('');
+    setConfiguracao(null);
+    setCodigosRecuperacao([]);
+    setErro(mensagem);
+  }
+
   async function submeterMfa(evento: React.FormEvent) {
     evento.preventDefault();
     setErro('');
@@ -91,6 +109,13 @@ export default function LoginPage() {
         irParaPosLogin(resposta.dados.perfil);
       }
     } catch (falha) {
+      if (
+        falha instanceof ApiError &&
+        falha.codigo === 'MFA_DESAFIO_ENCERRADO'
+      ) {
+        encerrarDesafioMfa(falha.message);
+        return;
+      }
       setErro(mensagemDeErro(falha));
     } finally {
       setEnviando(false);
@@ -102,73 +127,120 @@ export default function LoginPage() {
     router.replace(atual?.senhaProvisoria ? '/trocar-senha' : '/painel');
   }
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-100 p-4">
-      <div className="grid w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl md:grid-cols-[1.05fr_1fr]">
-        <aside className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-sky-800 via-sky-700 to-sky-600 p-10 text-white md:flex">
-          <div
-            className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10"
-            aria-hidden="true"
-          />
-          <div
-            className="absolute -bottom-24 -left-12 h-64 w-64 rounded-full bg-white/10"
-            aria-hidden="true"
-          />
-          <div className="relative">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
-              <ShieldCheck className="h-6 w-6" aria-hidden="true" />
-            </span>
-            <h1 className="mt-6 text-2xl font-semibold leading-snug">
-              Gestão de Licitações
-            </h1>
-            <p className="mt-2 max-w-xs text-sm text-sky-100">
-              Supervisão e acompanhamento de processos de contratação pública.
-            </p>
-          </div>
-          <ul className="relative mt-10 space-y-2.5 text-sm text-sky-100">
-            <li className="flex gap-2">
-              <span aria-hidden="true">•</span>
-              Processos, fluxos e prazos em um só lugar.
-            </li>
-            <li className="flex gap-2">
-              <span aria-hidden="true">•</span>
-              Acesso por cargo com permissões explícitas.
-            </li>
-            <li className="flex gap-2">
-              <span aria-hidden="true">•</span>
-              Histórico e auditoria de cada movimentação.
-            </li>
-          </ul>
-          <p className="relative mt-10 text-xs text-sky-200">
-            Uso institucional — autarquia municipal.
-          </p>
-        </aside>
+  const tituloEtapa: Record<Etapa, string> = {
+    credenciais: 'Entrar na plataforma',
+    mfa: 'Confirme sua identidade',
+    configurar: 'Ative a verificação em duas etapas',
+    codigos: 'Guarde seus códigos',
+  };
 
-        <div className="flex flex-col justify-center p-6 sm:p-10">
-          <div className="mb-6 flex items-center gap-3 md:hidden">
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-sky-700 text-white">
-              <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <span className="text-base font-semibold text-slate-800">
-              Gestão de Licitações
-            </span>
+  return (
+    <div className="min-h-screen bg-papel-50 lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(28rem,0.95fr)]">
+      <aside className="relative hidden overflow-hidden bg-tinta-950 p-10 text-white lg:flex lg:flex-col xl:p-14">
+        <div className="fundo-malha absolute inset-0 opacity-70" aria-hidden="true" />
+        <svg
+          className="absolute -bottom-24 -right-16 h-[34rem] w-[34rem] text-rota-700/50"
+          viewBox="0 0 400 400"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M18 332C82 332 92 214 158 214C224 214 236 102 304 102H386"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          />
+          <path
+            d="M18 358C96 358 108 262 174 262C240 262 254 150 322 150H386"
+            stroke="currentColor"
+            strokeWidth="1"
+            strokeDasharray="4 7"
+          />
+          <circle cx="158" cy="214" r="7" fill="#dc7a22" />
+          <circle cx="304" cy="102" r="5" fill="#47a092" />
+        </svg>
+
+        <div className="relative z-10">
+          <MarcaTramitaY />
+        </div>
+
+        <div className="relative z-10 my-auto max-w-lg py-16">
+          <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-rota-100">
+            <span className="h-1.5 w-1.5 rounded-full bg-sinal-400" aria-hidden="true" />
+            Gestão pública em movimento
+          </p>
+          <h1 className="max-w-md text-[2.65rem] font-semibold leading-[1.05] tracking-[-0.035em] text-white xl:text-[3.15rem]">
+            O processo inteiro,
+            <span className="block text-sinal-300">no mesmo trilho.</span>
+          </h1>
+          <p className="mt-5 max-w-md text-[0.98rem] leading-relaxed text-rota-100/90">
+            Acompanhe etapas, responsáveis e prazos com a rastreabilidade que a
+            rotina de licitações exige.
+          </p>
+
+          <ol className="mt-12 space-y-5 border-l border-white/15 pl-6">
+            {[
+              ['01', 'Fluxo visível', 'Cada etapa, prazo e responsável no lugar certo.'],
+              ['02', 'Acesso controlado', 'Permissões explícitas por papel e por setor.'],
+              ['03', 'Trilha auditável', 'Movimentações registradas para consulta e supervisão.'],
+            ].map(([numero, titulo, texto]) => (
+              <li key={numero} className="relative">
+                <span
+                  className="absolute -left-[1.93rem] top-1 flex h-4 w-4 items-center justify-center rounded-full border border-sinal-400 bg-tinta-950"
+                  aria-hidden="true"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-sinal-400" />
+                </span>
+                <p className="text-sm font-semibold text-white">
+                  <span className="mr-2 font-mono text-[0.65rem] font-normal text-rota-300">
+                    {numero}
+                  </span>
+                  {titulo}
+                </p>
+                <p className="mt-0.5 text-sm leading-relaxed text-rota-100/75">
+                  {texto}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <p className="relative z-10 text-xs text-rota-200/80">
+          Uso institucional · Autarquia municipal
+        </p>
+      </aside>
+
+      <main className="flex min-h-screen flex-col justify-center px-5 py-8 sm:px-10 lg:px-14">
+        <div className="mx-auto w-full max-w-md">
+          <div className="mb-9 lg:hidden">
+            <MarcaTramitaY tema="claro" />
+          </div>
+
+          <div className="mb-7">
+            <p className="text-[0.67rem] font-semibold uppercase tracking-[0.16em] text-rota-700">
+              TramitaY · Acesso institucional
+            </p>
+            <h2 className="mt-2 text-[1.8rem] font-semibold tracking-[-0.025em] text-tinta-950">
+              {tituloEtapa[etapa]}
+            </h2>
+            <p className="mt-1.5 text-sm leading-relaxed text-tinta-600">
+              {etapa === 'credenciais'
+                ? 'Informe suas credenciais para continuar.'
+                : etapa === 'mfa'
+                  ? 'Use o código do aplicativo autenticador ou um código de recuperação.'
+                  : etapa === 'configurar'
+                    ? 'Escaneie o QR Code e confirme o código gerado pelo aplicativo.'
+                    : 'Armazene os códigos em local seguro antes de continuar.'}
+            </p>
           </div>
 
           {etapa === 'credenciais' ? (
             <>
-              <h2 className="text-xl font-semibold tracking-tight text-slate-900">
-                Entrar
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Informe suas credenciais institucionais.
-              </p>
-
               <form
                 onSubmit={submeterCredenciais}
-                className="mt-6 flex flex-col gap-4"
+                className="flex flex-col gap-4"
               >
                 {erro ? <AlertaErro mensagem={erro} /> : null}
-                <Campo rotulo="E-mail" htmlFor="email" obrigatorio>
+                <Campo rotulo="E-mail institucional" htmlFor="email" obrigatorio>
                   <Entrada
                     id="email"
                     type="email"
@@ -187,7 +259,7 @@ export default function LoginPage() {
                       type={mostrarSenha ? 'text' : 'password'}
                       autoComplete="current-password"
                       required
-                      className="pr-10"
+                      className="pr-11"
                       value={senha}
                       onChange={(evento) => setSenha(evento.target.value)}
                     />
@@ -198,7 +270,7 @@ export default function LoginPage() {
                         mostrarSenha ? 'Ocultar senha' : 'Mostrar senha'
                       }
                       aria-pressed={mostrarSenha}
-                      className="absolute inset-y-0 right-0 flex w-10 items-center justify-center rounded-r-md text-slate-400 hover:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-600"
+                      className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-lg text-tinta-500 transition-colors hover:text-tinta-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rota-600"
                     >
                       {mostrarSenha ? (
                         <EyeOff className="h-4 w-4" aria-hidden="true" />
@@ -208,135 +280,124 @@ export default function LoginPage() {
                     </button>
                   </div>
                 </Campo>
-                <Botao type="submit" disabled={enviando} className="w-full">
+                <Botao type="submit" disabled={enviando} className="mt-1 w-full">
                   {enviando ? 'Entrando…' : 'Entrar'}
+                  {!enviando ? (
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  ) : null}
                 </Botao>
               </form>
 
-              <p className="mt-6 text-xs text-slate-400">
-                Problemas de acesso? Procure o administrador do sistema.
-              </p>
+              <div className="mt-7 flex items-start gap-2.5 rounded-xl border border-linha-200 bg-white px-3.5 py-3">
+                <KeyRound
+                  className="mt-0.5 h-4 w-4 shrink-0 text-tinta-500"
+                  aria-hidden="true"
+                />
+                <p className="text-xs leading-relaxed text-tinta-600">
+                  Problemas de acesso? Procure o administrador do sistema para
+                  desbloquear a conta ou redefinir a senha.
+                </p>
+              </div>
             </>
           ) : null}
 
           {etapa === 'mfa' ? (
-            <>
-              <h2 className="text-xl font-semibold tracking-tight text-slate-900">
-                Verificação em duas etapas
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Informe o código de 6 dígitos do aplicativo autenticador ou um
-                código de recuperação.
-              </p>
-              <form
-                onSubmit={submeterMfa}
-                className="mt-6 flex flex-col gap-4"
+            <form onSubmit={submeterMfa} className="flex flex-col gap-4">
+              {erro ? <AlertaErro mensagem={erro} /> : null}
+              <Campo rotulo="Código de verificação" htmlFor="mfa-codigo" obrigatorio>
+                <Entrada
+                  id="mfa-codigo"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  required
+                  maxLength={32}
+                  className="tabular text-center text-lg tracking-[0.3em]"
+                  value={codigo}
+                  onChange={(evento) => setCodigo(evento.target.value)}
+                />
+              </Campo>
+              <Botao type="submit" disabled={enviando} className="w-full">
+                {enviando ? 'Verificando…' : 'Verificar e entrar'}
+              </Botao>
+              <Botao
+                variante="sutil"
+                onClick={() => {
+                  setEtapa('credenciais');
+                  setErro('');
+                  setCodigo('');
+                }}
               >
-                {erro ? <AlertaErro mensagem={erro} /> : null}
-                <Campo rotulo="Código" htmlFor="mfa-codigo" obrigatorio>
-                  <Entrada
-                    id="mfa-codigo"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    autoFocus
-                    required
-                    maxLength={32}
-                    value={codigo}
-                    onChange={(evento) => setCodigo(evento.target.value)}
-                  />
-                </Campo>
-                <Botao type="submit" disabled={enviando} className="w-full">
-                  {enviando ? 'Verificando…' : 'Verificar e entrar'}
-                </Botao>
-                <Botao
-                  variante="secundario"
-                  onClick={() => {
-                    setEtapa('credenciais');
-                    setErro('');
-                  }}
-                >
-                  Voltar
-                </Botao>
-              </form>
-            </>
+                Voltar ao login
+              </Botao>
+            </form>
           ) : null}
 
           {etapa === 'configurar' && configuracao ? (
-            <>
-              <h2 className="text-xl font-semibold tracking-tight text-slate-900">
-                Configure a verificação em duas etapas
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Escaneie o QR Code com Google Authenticator, Microsoft
-                Authenticator ou outro aplicativo TOTP. A configuração é
-                obrigatória para contas administrativas.
-              </p>
-              <form
-                onSubmit={submeterMfa}
-                className="mt-4 flex flex-col gap-4"
+            <form onSubmit={submeterMfa} className="flex flex-col gap-4">
+              {erro ? <AlertaErro mensagem={erro} /> : null}
+              <div className="flex flex-col items-center gap-3 rounded-2xl border border-linha-200 bg-white p-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={configuracao.qrCodeDataUrl}
+                  alt="QR Code para configurar o autenticador"
+                  width={210}
+                  height={210}
+                  className="rounded-lg"
+                />
+                <p className="text-xs text-tinta-600">Ou informe a chave manualmente:</p>
+                <code className="max-w-full break-all rounded-lg bg-papel-100 px-2.5 py-1.5 font-mono text-xs text-tinta-800">
+                  {configuracao.segredo}
+                </code>
+              </div>
+              <Campo
+                rotulo="Código gerado pelo aplicativo"
+                htmlFor="mfa-config-codigo"
+                obrigatorio
               >
-                {erro ? <AlertaErro mensagem={erro} /> : null}
-                <div className="flex flex-col items-center gap-2 rounded-lg border border-slate-200 p-3">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={configuracao.qrCodeDataUrl}
-                    alt="QR Code para configurar o autenticador"
-                    width={220}
-                    height={220}
-                  />
-                  <p className="text-xs text-slate-500">
-                    Ou informe a chave manualmente:
-                  </p>
-                  <code className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-700">
-                    {configuracao.segredo}
-                  </code>
-                </div>
-                <Campo
-                  rotulo="Código gerado pelo aplicativo"
-                  htmlFor="mfa-config-codigo"
-                  obrigatorio
-                >
-                  <Entrada
-                    id="mfa-config-codigo"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    autoFocus
-                    required
-                    value={codigo}
-                    onChange={(evento) => setCodigo(evento.target.value)}
-                  />
-                </Campo>
-                <Botao type="submit" disabled={enviando} className="w-full">
-                  {enviando ? 'Confirmando…' : 'Confirmar configuração'}
-                </Botao>
-              </form>
-            </>
+                <Entrada
+                  id="mfa-config-codigo"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  required
+                  className="tabular text-center text-lg tracking-[0.3em]"
+                  value={codigo}
+                  onChange={(evento) => setCodigo(evento.target.value)}
+                />
+              </Campo>
+              <Botao type="submit" disabled={enviando} className="w-full">
+                {enviando ? 'Confirmando…' : 'Confirmar configuração'}
+              </Botao>
+            </form>
           ) : null}
 
           {etapa === 'codigos' ? (
             <>
-              <h2 className="text-xl font-semibold tracking-tight text-slate-900">
-                Guarde seus códigos de recuperação
-              </h2>
-              <div className="mt-3">
-                <AlertaSucesso mensagem="MFA configurado com sucesso." />
-              </div>
-              <p className="mt-3 text-sm text-slate-600">
-                Cada código pode ser usado uma única vez caso você perca o
-                acesso ao aplicativo autenticador. Armazene-os em local seguro.
+              <AlertaSucesso mensagem="Verificação em duas etapas ativada." />
+              <p className="mt-4 text-sm leading-relaxed text-tinta-600">
+                Cada código pode ser usado uma única vez caso você perca o acesso
+                ao aplicativo autenticador.
               </p>
-              <ul className="mt-4 grid grid-cols-2 gap-2 rounded-lg border border-slate-200 p-3 font-mono text-sm text-slate-800">
+              <ul className="mt-4 grid grid-cols-2 gap-2 rounded-2xl border border-linha-200 bg-white p-4 font-mono text-sm text-tinta-900">
                 {codigosRecuperacao.map((item) => (
-                  <li key={item}>{item}</li>
+                  <li key={item} className="tabular">
+                    {item}
+                  </li>
                 ))}
               </ul>
-              <Botao className="mt-4 w-full" onClick={continuarAposCodigos}>
-                Continuar
+              <Botao className="mt-5 w-full" onClick={continuarAposCodigos}>
+                Já guardei os códigos
               </Botao>
             </>
           ) : null}
+
+          <p className="mt-9 border-t border-linha-200 pt-4 text-[0.68rem] leading-relaxed text-tinta-500">
+            Acesso restrito a servidores autorizados. Todas as operações são
+            registradas para auditoria.
+          </p>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
   AlertaErro,
   AlertaSucesso,
   Botao,
+  CabecalhoPagina,
   Campo,
   Carregando,
   Cartao,
@@ -336,25 +337,23 @@ export default function UsuariosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-800">Usuários</h1>
-          <p className="text-sm text-slate-500">
-            Contas de acesso e papéis atribuídos.
-          </p>
-        </div>
-        {podeCriar ? (
-          <Botao onClick={abrirNovo}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Novo usuário
-          </Botao>
-        ) : null}
-      </div>
+      <CabecalhoPagina
+        titulo="Usuários"
+        descricao="Contas de acesso e papéis atribuídos."
+        acao={
+          podeCriar ? (
+            <Botao onClick={abrirNovo}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Novo usuário
+            </Botao>
+          ) : null
+        }
+      />
 
       {sucesso ? <AlertaSucesso mensagem={sucesso} /> : null}
 
       <Cartao>
-        <div className="border-b border-slate-200 px-4 py-3">
+        <div className="border-b border-linha-200 px-4 py-3">
           <Entrada
             placeholder="Buscar por nome ou e-mail"
             aria-label="Buscar usuários"
@@ -378,7 +377,7 @@ export default function UsuariosPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
+              <thead className="border-b border-linha-200 text-xs uppercase text-tinta-500">
                 <tr>
                   <th className="px-4 py-2">Nome</th>
                   <th className="px-4 py-2">E-mail</th>
@@ -389,17 +388,17 @@ export default function UsuariosPage() {
                   <th className="px-4 py-2" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-papel-100">
                 {itens.map((usuario) => (
-                  <tr key={usuario.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-800">
+                  <tr key={usuario.id} className="hover:bg-papel-50">
+                    <td className="px-4 py-3 font-medium text-tinta-800">
                       {usuario.nome}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">{usuario.email}</td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-tinta-600">{usuario.email}</td>
+                    <td className="px-4 py-3 text-tinta-600">
                       {usuario.cargo?.nome ?? '—'}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-tinta-600">
                       {usuario.setores.length > 0
                         ? usuario.setores
                             .map(
@@ -409,7 +408,7 @@ export default function UsuariosPage() {
                             .join(', ')
                         : '—'}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-tinta-600">
                       {usuario.roles.length > 0 ? usuario.roles.join(', ') : '—'}
                     </td>
                     <td className="px-4 py-3">
@@ -486,8 +485,8 @@ export default function UsuariosPage() {
         )}
 
         {paginacao && paginacao.totalPaginas > 1 ? (
-          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm">
-            <span className="text-slate-500">
+          <div className="flex items-center justify-between border-t border-linha-200 px-4 py-3 text-sm">
+            <span className="text-tinta-500">
               Página {paginacao.pagina} de {paginacao.totalPaginas}
             </span>
             <div className="flex gap-2">
@@ -605,7 +604,7 @@ export default function UsuariosPage() {
                 ))}
               </Selecao>
             </Campo>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-tinta-700">
               <input
                 type="checkbox"
                 checked={form.ativo}
@@ -617,7 +616,7 @@ export default function UsuariosPage() {
               Ativo
             </label>
             {form.id !== null && form.ativo ? (
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-tinta-500">
                 Para desativar, use a ação “Desativar” na lista, informando o
                 usuário de destino das atribuições.
               </p>
@@ -641,12 +640,12 @@ export default function UsuariosPage() {
           </>
         }
       >
-        <p className="mb-3 text-sm text-slate-500">
+        <p className="mb-3 text-sm text-tinta-500">
           Selecione os papéis do usuário. Cada papel concede as permissões
           listadas.
         </p>
         {papels.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhum papel cadastrado.</p>
+          <p className="text-sm text-tinta-500">Nenhum papel cadastrado.</p>
         ) : (
           <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto pr-1">
             {papels.map((papel) => {
@@ -654,12 +653,12 @@ export default function UsuariosPage() {
               return (
                 <li
                   key={papel.id}
-                  className="rounded-md border border-slate-200 p-3"
+                  className="rounded-md border border-linha-200 p-3"
                 >
                   <label className="flex items-start gap-2">
                     <input
                       type="checkbox"
-                      className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                      className="mt-0.5 h-4 w-4 rounded border-linha-300"
                       checked={marcado}
                       onChange={(evento) =>
                         setRolesSelecionados((atual) =>
@@ -671,7 +670,7 @@ export default function UsuariosPage() {
                     />
                     <span className="flex-1">
                       <span className="flex flex-wrap items-center gap-2">
-                        <span className="text-sm font-medium text-slate-800">
+                        <span className="text-sm font-medium text-tinta-800">
                           {papel.nome}
                         </span>
                         <Etiqueta
@@ -681,7 +680,7 @@ export default function UsuariosPage() {
                           {papel.permissoes.length === 1 ? 'm' : 's'}
                         </Etiqueta>
                       </span>
-                      <span className="mt-1 block text-xs text-slate-500">
+                      <span className="mt-1 block text-xs text-tinta-500">
                         {papel.descricao ? (
                           <span className="block italic">
                             {papel.descricao}
@@ -729,13 +728,13 @@ export default function UsuariosPage() {
           </>
         }
       >
-        <p className="mb-3 text-sm text-slate-500">
+        <p className="mb-3 text-sm text-tinta-500">
           Selecione os setores do usuário e indique o setor principal. O setor
           principal é sugerido automaticamente ao atribuir o usuário a uma
           etapa do processo.
         </p>
         {setores.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhum setor cadastrado.</p>
+          <p className="text-sm text-tinta-500">Nenhum setor cadastrado.</p>
         ) : (
           <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto pr-1">
             {setores.map((setor) => {
@@ -747,31 +746,31 @@ export default function UsuariosPage() {
               return (
                 <li
                   key={setor.id}
-                  className="rounded-md border border-slate-200 p-3"
+                  className="rounded-md border border-linha-200 p-3"
                 >
                   <div className="flex flex-wrap items-center gap-3">
                     <label className="flex flex-1 items-center gap-2">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300"
+                        className="h-4 w-4 rounded border-linha-300"
                         checked={marcado}
                         disabled={!disponivel}
                         onChange={(evento) =>
                           alternarSetor(setor.id, evento.target.checked)
                         }
                       />
-                      <span className="text-sm font-medium text-slate-800">
+                      <span className="text-sm font-medium text-tinta-800">
                         {setor.nome}
                       </span>
                       {!setor.ativo ? (
                         <Etiqueta tom="neutro">Inativo</Etiqueta>
                       ) : null}
                     </label>
-                    <label className="flex items-center gap-2 text-xs text-slate-600">
+                    <label className="flex items-center gap-2 text-xs text-tinta-600">
                       <input
                         type="radio"
                         name="setor-principal"
-                        className="h-4 w-4 border-slate-300"
+                        className="h-4 w-4 border-linha-300"
                         checked={setorPrincipalId === String(setor.id)}
                         disabled={!marcado}
                         onChange={() => setSetorPrincipalId(String(setor.id))}
@@ -806,10 +805,10 @@ export default function UsuariosPage() {
         }
       >
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-tinta-600">
             Desativar <strong>{desativando?.nome}</strong>? O usuário perderá o
-            acesso imediatamente, as sessões serão revogadas, as delegações
-            serão canceladas e as atribuições serão transferidas.
+            acesso imediatamente, as sessões serão revogadas e as atribuições
+            serão transferidas.
           </p>
           <Campo
             rotulo="Usuário de destino das atribuições"
@@ -829,7 +828,7 @@ export default function UsuariosPage() {
               ))}
             </Selecao>
           </Campo>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-tinta-500">
             O histórico e as movimentações são preservados.
           </p>
         </div>
@@ -848,22 +847,22 @@ export default function UsuariosPage() {
         {carregandoSessoes ? (
           <Carregando texto="Carregando sessões…" />
         ) : sessoes.length === 0 ? (
-          <p className="text-sm text-slate-500">Nenhuma sessão ativa.</p>
+          <p className="text-sm text-tinta-500">Nenhuma sessão ativa.</p>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-papel-100">
             {sessoes.map((sessao) => (
               <li
                 key={sessao.id}
                 className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="text-sm">
-                  <p className="font-medium text-slate-800">
+                  <p className="font-medium text-tinta-800">
                     {sessao.userAgent
                       ? sessao.userAgent.slice(0, 90)
                       : 'Dispositivo não identificado'}
                     {sessao.atual ? ' (sessão atual)' : ''}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-tinta-500">
                     IP {sessao.ip ?? '—'} · Início{' '}
                     {formatarDataHora(sessao.criadaEm)} · Expira{' '}
                     {formatarDataHora(sessao.expiraEm)}
@@ -901,7 +900,7 @@ export default function UsuariosPage() {
           </>
         }
       >
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-tinta-600">
           Redefinir o MFA de <strong>{resetandoMfa?.nome}</strong>? As sessões
           serão revogadas e o usuário deverá configurar um novo autenticador no
           próximo acesso. Esta ação fica registrada na auditoria.

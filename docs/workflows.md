@@ -100,17 +100,12 @@ podem ser puladas.
   automaticamente. Havendo obrigatória não finalizada, a conclusão é rejeitada e
   a resposta lista as etapas impeditivas.
 
-## Minhas tarefas, delegações e visões salvas
+## Minhas tarefas e visões salvas
 
 - **Minhas tarefas** (`GET /api/tarefas`) reúne etapas ativas atribuídas ao
-  usuário e, no período vigente, etapas delegadas a ele. Somente a etapa atual
-  do processo aparece como `PENDENTE`; etapas futuras não são exibidas antes de
-  serem ativadas. Processos encerrados são omitidos.
-- **Delegação temporária** (`/api/delegacoes`) permite compartilhar as tarefas
-  do usuário de origem com outro usuário ativo por um período e, opcionalmente,
-  para um processo específico. A delegação não altera o responsável original da
-  etapa, pode ser cancelada e exige motivo, com auditoria. Não é permitida
-  sobreposição para o mesmo destino.
+  usuário. Somente a etapa atual do processo aparece como `PENDENTE`; etapas
+  futuras não são exibidas antes de serem ativadas. Processos encerrados são
+  omitidos.
 - **Visões salvas** (`/api/visoes`) armazenam filtros da listagem de processos de
   forma privada por usuário. O nome é único por usuário; os filtros são validados
   com Zod e não aceitam SQL ou campos desconhecidos.
@@ -130,8 +125,8 @@ O administrador mantém o vínculo entre usuários e setores na tela de usuário
   responsável, setor e prazo da etapa atual.
 - Na desativação de usuário, as atribuições de processo e etapa são transferidas
   para um usuário ativo de destino. As etapas transferidas assumem o setor
-  principal do destino; a operação é transacional, revoga sessões, cancela
-  delegações e registra movimentações e auditoria.
+  principal do destino; a operação é transacional, revoga sessões e registra
+  movimentações e auditoria.
 
 ## Movimentações
 

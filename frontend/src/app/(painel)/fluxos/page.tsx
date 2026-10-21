@@ -9,6 +9,7 @@ import {
   AlertaErro,
   AreaTexto,
   Botao,
+  CabecalhoPagina,
   Campo,
   Carregando,
   Cartao,
@@ -97,23 +98,21 @@ export default function FluxosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-800">Fluxos</h1>
-          <p className="text-sm text-slate-500">
-            Versões de fluxo de trabalho por tipo de processo.
-          </p>
-        </div>
-        {temPermissao('fluxos.create') ? (
-          <Botao onClick={() => setNovoAberto(true)}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Novo fluxo
-          </Botao>
-        ) : null}
-      </div>
+      <CabecalhoPagina
+        titulo="Fluxos"
+        descricao="Versões de fluxo de trabalho por tipo de processo."
+        acao={
+          temPermissao('fluxos.create') ? (
+            <Botao onClick={() => setNovoAberto(true)}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Novo fluxo
+            </Botao>
+          ) : null
+        }
+      />
 
       <Cartao>
-        <div className="flex flex-wrap gap-3 border-b border-slate-200 px-4 py-3">
+        <div className="flex flex-wrap gap-3 border-b border-linha-200 px-4 py-3">
           <Selecao
             aria-label="Filtrar por tipo"
             value={tipoId}
@@ -160,7 +159,7 @@ export default function FluxosPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
+              <thead className="border-b border-linha-200 text-xs uppercase text-tinta-500">
                 <tr>
                   <th className="px-4 py-2">Nome</th>
                   <th className="px-4 py-2">Tipo</th>
@@ -169,27 +168,27 @@ export default function FluxosPage() {
                   <th className="px-4 py-2">Publicado</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-papel-100">
                 {fluxos.map((fluxo) => (
-                  <tr key={fluxo.id} className="hover:bg-slate-50">
+                  <tr key={fluxo.id} className="hover:bg-papel-50">
                     <td className="px-4 py-3">
                       <Link
                         href={`/fluxos/${fluxo.id}`}
-                        className="font-medium text-sky-800 hover:underline"
+                        className="font-medium text-rota-800 hover:underline"
                       >
                         {fluxo.nome}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-tinta-600">
                       {fluxo.tipoProcessoNome ?? '—'}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">v{fluxo.versao}</td>
+                    <td className="px-4 py-3 text-tinta-600">v{fluxo.versao}</td>
                     <td className="px-4 py-3">
                       <Etiqueta tom={TOM_SITUACAO[fluxo.situacao] ?? 'neutro'}>
                         {ROTULOS_SITUACAO_FLUXO[fluxo.situacao] ?? fluxo.situacao}
                       </Etiqueta>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-tinta-600">
                       {formatarData(fluxo.publicadoEm)}
                     </td>
                   </tr>
@@ -200,8 +199,8 @@ export default function FluxosPage() {
         )}
 
         {paginacao && paginacao.totalPaginas > 1 ? (
-          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm">
-            <span className="text-slate-500">
+          <div className="flex items-center justify-between border-t border-linha-200 px-4 py-3 text-sm">
+            <span className="text-tinta-500">
               Página {paginacao.pagina} de {paginacao.totalPaginas}
             </span>
             <div className="flex gap-2">

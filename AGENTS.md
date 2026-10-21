@@ -1,4 +1,4 @@
-# AGENTS.md — Sistema de Gestão de Licitações e Contratações Públicas
+# AGENTS.md — TramitaY: Gestão de Licitações e Contratações Públicas
 
 Este arquivo é a fonte principal de instruções persistentes para agentes de IA
 que trabalham neste repositório. Ele deve ser lido antes de qualquer tarefa e
@@ -212,6 +212,10 @@ reduzir cobertura para fazer algo passar. Nunca afirmar que um teste passou sem
 executá-lo; se não for possível executar, informar a limitação.
 
 ## 17. Interface e acessibilidade
+
+Antes de alterar telas, consulte `PRODUCT.md` (verdade de produto e marca) e
+`DESIGN.md` (tokens, componentes e padrões visuais). A interface segue a direção
+**Malha cívica** do TramitaY.
 
 Design system com cores semânticas, tipografia, espaçamento, bordas, elevação,
 raios e estados. Layout com sidebar, cabeçalho contextual, breadcrumbs, estados

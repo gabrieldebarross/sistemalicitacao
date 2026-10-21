@@ -72,7 +72,7 @@ export default function MinhasTarefasPage() {
       rotulo: 'Total de tarefas',
       valor: resumo?.total ?? 0,
       icone: ListTodo,
-      classe: 'text-sky-800 bg-sky-50 border-sky-200',
+      classe: 'text-rota-800 bg-rota-50 border-rota-200',
     },
     {
       rotulo: 'Atrasadas',
@@ -90,7 +90,7 @@ export default function MinhasTarefasPage() {
       rotulo: 'Sem prazo definido',
       valor: resumo?.semPrazo ?? 0,
       icone: UserCheck,
-      classe: 'text-slate-700 bg-slate-50 border-slate-200',
+      classe: 'text-tinta-700 bg-papel-50 border-linha-200',
     },
   ];
 
@@ -98,7 +98,7 @@ export default function MinhasTarefasPage() {
     <div className="flex flex-col gap-6">
       <CabecalhoPagina
         titulo="Minhas tarefas"
-        descricao="Etapas atribuídas a você e tarefas delegadas temporariamente por outros usuários."
+        descricao="Etapas ativas atribuídas a você, com prazo e próxima ação."
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -122,7 +122,7 @@ export default function MinhasTarefasPage() {
       </div>
 
       <Cartao>
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 px-4 py-3">
+        <div className="flex flex-wrap items-center gap-3 border-b border-linha-200 px-4 py-3">
           <Selecao
             aria-label="Filtrar por situação da etapa"
             value={status}
@@ -137,7 +137,7 @@ export default function MinhasTarefasPage() {
             <option value="EM_ANDAMENTO">Em andamento</option>
             <option value="BLOQUEADA">Bloqueadas</option>
           </Selecao>
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex items-center gap-2 text-sm text-tinta-700">
             <Entrada
               type="checkbox"
               checked={atrasado}
@@ -163,7 +163,7 @@ export default function MinhasTarefasPage() {
             descricao="Você não possui etapas atribuídas com os filtros atuais."
           />
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-papel-100">
             {tarefas.map((tarefa) => (
               <li
                 key={`${tarefa.processo.id}-${tarefa.id}`}
@@ -173,7 +173,7 @@ export default function MinhasTarefasPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <Link
                       href={`/processos/${tarefa.processo.id}`}
-                      className="font-medium text-sky-800 hover:underline"
+                      className="font-medium text-rota-800 hover:underline"
                     >
                       {tarefa.processo.nome || tarefa.processo.numero}
                     </Link>
@@ -192,10 +192,10 @@ export default function MinhasTarefasPage() {
                       </Etiqueta>
                     ) : null}
                   </div>
-                  <p className="mt-1 text-sm text-slate-700">
+                  <p className="mt-1 text-sm text-tinta-700">
                     {tarefa.etapa.nome}
                   </p>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-tinta-500">
                     Nº {tarefa.processo.numero} · Prazo:{' '}
                     {formatarData(tarefa.etapa.dataPrevista)} ·{' '}
                     {tarefa.setor?.nome ?? 'Sem setor'}
@@ -203,11 +203,6 @@ export default function MinhasTarefasPage() {
                       ? ` · Responsável: ${tarefa.responsavel.nome}`
                       : ''}
                   </p>
-                  {tarefa.delegacao ? (
-                    <p className="mt-1 text-xs text-amber-800">
-                      Delegada por {tarefa.delegacao.origem?.nome ?? 'outro usuário'}.
-                    </p>
-                  ) : null}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <Link href={`/processos/${tarefa.processo.id}`}>
@@ -226,8 +221,8 @@ export default function MinhasTarefasPage() {
         )}
 
         {paginacao && paginacao.totalPaginas > 1 ? (
-          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm">
-            <span className="text-slate-500">
+          <div className="flex items-center justify-between border-t border-linha-200 px-4 py-3 text-sm">
+            <span className="text-tinta-500">
               Página {paginacao.pagina} de {paginacao.totalPaginas} ({paginacao.total} itens)
             </span>
             <div className="flex gap-2">

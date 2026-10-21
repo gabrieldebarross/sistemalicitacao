@@ -1,8 +1,8 @@
 {
-  "name": "sistema-licitacao-frontend",
+  "name": "tramitay-frontend",
   "version": "0.1.0",
   "private": true,
-  "description": "Frontend do Sistema de Gestão de Licitações e Contratações Públicas.",
+  "description": "Frontend do TramitaY, plataforma de gestão de licitações e contratações públicas.",
   "scripts": {
     "dev": "next dev -p 3001",
     "build": "next build",

@@ -73,9 +73,8 @@ Regras de comportamento ligadas a essas permissões:
   são independentes: alterar uma não modifica a outra, e o setor do processo não
   é preenchido automaticamente. O setor da etapa acompanha automaticamente o
   setor principal do novo responsável.
-- `tarefas` e `delegacoes` exigem `processos.read`/`processos.assign`. Cada
-  usuário só vê e gerencia as próprias delegações; visões salvas também são
-  privadas por usuário.
+- `tarefas` exige `processos.read`; cada usuário só vê as tarefas atribuídas a
+  ele. Visões salvas também são privadas por usuário.
 - `usuarios.update` permite redefinir senha, desbloquear login, redefinir MFA e
   consultar/revogar sessões de outro usuário. Essas ações são auditadas e a
   redefinição de MFA/senha revoga as sessões do alvo. O próprio usuário gerencia
@@ -102,7 +101,7 @@ Regras de comportamento ligadas a essas permissões:
   caso a troca é exigida no próximo acesso e as sessões são revogadas.
 - A desativação de usuário usa `usuarios.deactivate` e exige um usuário ativo de
   destino quando houver processos ou etapas atribuídos. A operação é transacional
-  e transfere processos e etapas, cancela delegações e revoga sessões.
+  e transfere processos e etapas e revoga as sessões do usuário.
 - `reports.read` corresponde ao painel e aos indicadores gerenciais. Não existe
   exportação de relatórios: `reports.export`, `processos.export` e
   `processos.supervise` foram removidas por não possuírem funcionalidade

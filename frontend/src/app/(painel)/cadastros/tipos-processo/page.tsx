@@ -7,6 +7,7 @@ import {
   AlertaErro,
   AreaTexto,
   Botao,
+  CabecalhoPagina,
   Campo,
   Carregando,
   Cartao,
@@ -94,25 +95,21 @@ export default function TiposProcessoPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-800">
-            Tipos de processo
-          </h1>
-          <p className="text-sm text-slate-500">
-            Categorias de contratação da autarquia.
-          </p>
-        </div>
-        {podeEditar ? (
-          <Botao onClick={() => setForm({ ...VAZIO })}>
-            <Plus className="h-4 w-4" aria-hidden="true" />
-            Novo tipo
-          </Botao>
-        ) : null}
-      </div>
+      <CabecalhoPagina
+        titulo="Tipos de processo"
+        descricao="Categorias de contratação da autarquia."
+        acao={
+          podeEditar ? (
+            <Botao onClick={() => setForm({ ...VAZIO })}>
+              <Plus className="h-4 w-4" aria-hidden="true" />
+              Novo tipo
+            </Botao>
+          ) : null
+        }
+      />
 
       <Cartao>
-        <div className="border-b border-slate-200 px-4 py-3">
+        <div className="border-b border-linha-200 px-4 py-3">
           <Entrada
             placeholder="Buscar por nome"
             aria-label="Buscar tipos"
@@ -136,7 +133,7 @@ export default function TiposProcessoPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
+              <thead className="border-b border-linha-200 text-xs uppercase text-tinta-500">
                 <tr>
                   <th className="px-4 py-2">Nome</th>
                   <th className="px-4 py-2">Base normativa</th>
@@ -144,13 +141,13 @@ export default function TiposProcessoPage() {
                   <th className="px-4 py-2" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-papel-100">
                 {itens.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-800">
+                  <tr key={item.id} className="hover:bg-papel-50">
+                    <td className="px-4 py-3 font-medium text-tinta-800">
                       {item.nome}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-tinta-600">
                       {item.baseLegal ?? '—'}
                     </td>
                     <td className="px-4 py-3">
@@ -184,8 +181,8 @@ export default function TiposProcessoPage() {
         )}
 
         {paginacao && paginacao.totalPaginas > 1 ? (
-          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm">
-            <span className="text-slate-500">
+          <div className="flex items-center justify-between border-t border-linha-200 px-4 py-3 text-sm">
+            <span className="text-tinta-500">
               Página {paginacao.pagina} de {paginacao.totalPaginas}
             </span>
             <div className="flex gap-2">
@@ -259,7 +256,7 @@ export default function TiposProcessoPage() {
                 }
               />
             </Campo>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-tinta-700">
               <input
                 type="checkbox"
                 checked={form.ativo}

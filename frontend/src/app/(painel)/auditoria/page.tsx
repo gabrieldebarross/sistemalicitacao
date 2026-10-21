@@ -139,7 +139,7 @@ export default function AuditoriaPage() {
 
   if (!podeVer) {
     return (
-      <Cartao className="px-4 py-6 text-sm text-slate-600">
+      <Cartao className="px-4 py-6 text-sm text-tinta-600">
         Você não possui permissão para visualizar a auditoria.
       </Cartao>
     );
@@ -160,11 +160,11 @@ export default function AuditoriaPage() {
       />
 
       <Cartao>
-        <div className="flex flex-wrap items-end gap-3 border-b border-slate-200 px-4 py-3">
+        <div className="flex flex-wrap items-end gap-3 border-b border-linha-200 px-4 py-3">
           <div className="flex flex-col gap-1">
             <label
               htmlFor="filtro-acao"
-              className="text-xs font-medium text-slate-500"
+              className="text-xs font-medium text-tinta-500"
             >
               Ação
             </label>
@@ -188,7 +188,7 @@ export default function AuditoriaPage() {
           <div className="flex flex-col gap-1">
             <label
               htmlFor="filtro-recurso"
-              className="text-xs font-medium text-slate-500"
+              className="text-xs font-medium text-tinta-500"
             >
               Recurso
             </label>
@@ -212,7 +212,7 @@ export default function AuditoriaPage() {
           <div className="flex flex-col gap-1">
             <label
               htmlFor="filtro-desde"
-              className="text-xs font-medium text-slate-500"
+              className="text-xs font-medium text-tinta-500"
             >
               Desde
             </label>
@@ -230,7 +230,7 @@ export default function AuditoriaPage() {
           <div className="flex flex-col gap-1">
             <label
               htmlFor="filtro-ate"
-              className="text-xs font-medium text-slate-500"
+              className="text-xs font-medium text-tinta-500"
             >
               Até
             </label>
@@ -258,7 +258,7 @@ export default function AuditoriaPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
+              <thead className="border-b border-linha-200 text-xs uppercase text-tinta-500">
                 <tr>
                   <th className="px-4 py-2">Data</th>
                   <th className="px-4 py-2">Usuário</th>
@@ -268,19 +268,19 @@ export default function AuditoriaPage() {
                   <th className="px-4 py-2" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-papel-100">
                 {itens.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50">
-                    <td className="whitespace-nowrap px-4 py-3 text-slate-600">
+                  <tr key={item.id} className="hover:bg-papel-50">
+                    <td className="whitespace-nowrap px-4 py-3 text-tinta-600">
                       {formatarDataHora(item.criadoEm)}
                     </td>
-                    <td className="px-4 py-3 text-slate-700">
+                    <td className="px-4 py-3 text-tinta-700">
                       {item.usuario?.nome ?? 'Sistema'}
                     </td>
-                    <td className="px-4 py-3 font-medium text-slate-800">
+                    <td className="px-4 py-3 font-medium text-tinta-800">
                       {rotuloAcao(item.acao)}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-tinta-600">
                       {rotuloRecurso(item.recurso)}
                       {alvoAuditoria(item)
                         ? ` · ${alvoAuditoria(item)}`
@@ -317,8 +317,8 @@ export default function AuditoriaPage() {
         )}
 
         {paginacao && paginacao.totalPaginas > 1 ? (
-          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm">
-            <span className="text-slate-500">
+          <div className="flex items-center justify-between border-t border-linha-200 px-4 py-3 text-sm">
+            <span className="text-tinta-500">
               Página {paginacao.pagina} de {paginacao.totalPaginas} (
               {paginacao.total} registros)
             </span>
@@ -383,10 +383,10 @@ export default function AuditoriaPage() {
 
             {detalhe.justificativa ? (
               <div>
-                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                <h3 className="text-xs font-medium uppercase tracking-wide text-tinta-500">
                   Justificativa
                 </h3>
-                <p className="mt-1 text-sm text-slate-800">
+                <p className="mt-1 text-sm text-tinta-800">
                   {detalhe.justificativa}
                 </p>
               </div>
@@ -394,49 +394,49 @@ export default function AuditoriaPage() {
 
             {alteracoes.length > 0 ? (
               <div>
-                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                <h3 className="text-xs font-medium uppercase tracking-wide text-tinta-500">
                   Alterações
                 </h3>
-                <div className="mt-1 overflow-x-auto rounded border border-slate-200">
-                  <table className="min-w-full divide-y divide-slate-200 text-sm">
+                <div className="mt-1 overflow-x-auto rounded border border-linha-200">
+                  <table className="min-w-full divide-y divide-linha-200 text-sm">
                     <caption className="sr-only">
                       Valores anteriores e novos dos campos alterados
                     </caption>
-                    <thead className="bg-slate-50">
+                    <thead className="bg-papel-50">
                       <tr>
                         <th
                           scope="col"
-                          className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500"
+                          className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-tinta-500"
                         >
                           Campo
                         </th>
                         <th
                           scope="col"
-                          className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500"
+                          className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-tinta-500"
                         >
                           Antes
                         </th>
                         <th
                           scope="col"
-                          className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500"
+                          className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-tinta-500"
                         >
                           Depois
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
+                    <tbody className="divide-y divide-papel-100 bg-white">
                       {alteracoes.map(([chave, alteracao]) => (
                         <tr key={chave}>
                           <th
                             scope="row"
-                            className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-slate-600"
+                            className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-tinta-600"
                           >
                             {formatarRotuloMetadado(chave)}
                           </th>
-                          <td className="break-words px-3 py-2 text-slate-700">
+                          <td className="break-words px-3 py-2 text-tinta-700">
                             {formatarValor(alteracao.anterior)}
                           </td>
-                          <td className="break-words px-3 py-2 text-slate-900">
+                          <td className="break-words px-3 py-2 text-tinta-950">
                             {formatarValor(alteracao.novo)}
                           </td>
                         </tr>
@@ -448,11 +448,11 @@ export default function AuditoriaPage() {
             ) : null}
 
             <div>
-              <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <h3 className="text-xs font-medium uppercase tracking-wide text-tinta-500">
                 Detalhes adicionais
               </h3>
               {entradasMetadados.length === 0 ? (
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-sm text-tinta-500">
                   Sem informações adicionais.
                 </p>
               ) : (
@@ -460,12 +460,12 @@ export default function AuditoriaPage() {
                   {entradasMetadados.map(([chave, valor]) => (
                     <div
                       key={chave}
-                      className="flex flex-col rounded border border-slate-100 bg-slate-50 px-3 py-2 sm:flex-row sm:items-baseline sm:gap-3"
+                      className="flex flex-col rounded border border-papel-100 bg-papel-50 px-3 py-2 sm:flex-row sm:items-baseline sm:gap-3"
                     >
-                      <dt className="text-xs font-medium text-slate-500 sm:w-40 sm:shrink-0">
+                      <dt className="text-xs font-medium text-tinta-500 sm:w-40 sm:shrink-0">
                         {formatarRotuloMetadado(chave)}
                       </dt>
-                      <dd className="break-words text-sm text-slate-800">
+                      <dd className="break-words text-sm text-tinta-800">
                         {formatarValor(valor)}
                       </dd>
                     </div>

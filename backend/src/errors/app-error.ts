@@ -36,6 +36,20 @@ export class AuthenticationError extends AppError {
   }
 }
 
+/**
+ * O desafio de MFA deixou de ser válido (expirou, foi revogado ou atingiu o
+ * limite de tentativas). O cliente deve descartar o cookie de desafio e voltar
+ * ao login.
+ */
+export class MfaChallengeError extends AppError {
+  constructor(
+    message = 'Desafio de MFA encerrado. Faça login novamente.',
+    detalhes?: AppErrorDetalhes,
+  ) {
+    super(message, 401, 'MFA_DESAFIO_ENCERRADO', detalhes);
+  }
+}
+
 export class AuthorizationError extends AppError {
   constructor(
     message = 'Acesso não autorizado.',

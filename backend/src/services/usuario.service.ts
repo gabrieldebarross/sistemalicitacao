@@ -8,7 +8,6 @@ import {
   ValidationError,
 } from '../errors/app-error.js';
 import type { Usuario } from '../models/usuario.js';
-import * as delegacaoRepo from '../repositories/delegacao.repository.js';
 import * as movRepo from '../repositories/movimentacao.repository.js';
 import * as processoRepo from '../repositories/processo.repository.js';
 import * as roleRepo from '../repositories/role.repository.js';
@@ -535,11 +534,6 @@ export async function desativar(
       }
     }
 
-    await delegacaoRepo.cancelarDoUsuario(
-      id,
-      contexto.usuarioId,
-      transaction,
-    );
     await sessaoRepo.revogarTodasDoUsuario(
       id,
       new Date(),
@@ -561,7 +555,6 @@ export async function desativar(
       processosTransferidos,
       etapasTransferidas,
       sessoesRevogadas: true,
-      delegacoesCanceladas: true,
     },
   });
   return buscarPorId(id);

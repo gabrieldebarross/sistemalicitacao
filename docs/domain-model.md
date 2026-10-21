@@ -1,4 +1,4 @@
-# Modelo de Domínio — Sistema de Gestão de Licitações
+# Modelo de Domínio — TramitaY
 
 > Documento inicial (Fase 0). Consolidado na Fase 1 e no banco (Fase 3).
 
@@ -29,7 +29,6 @@ Processo → ProcessoEtapa / Movimentacao / Responsabilidades / Histórico
 | `SenhaHistorico` | Hashes das últimas senhas, para impedir reutilização. |
 | `MfaCodigoRecuperacao` | Códigos de recuperação de MFA, armazenados somente como hash. |
 | `VisaoSalva` | Filtros da listagem de processos, privados por usuário. |
-| `Delegacao` | Compartilhamento temporário de tarefas entre usuários. |
 
 Entidades adicionais (versões de fluxo, transições, fundamentos legais,
 documentos) serão avaliadas quando houver necessidade comprovada.
@@ -57,7 +56,7 @@ Acesso e auditoria: `usuarios`, `roles`, `permissions`, `user_roles`,
 
 Sessões e segurança: `sessoes`, `senhas_historico`, `mfa_codigos_recuperacao`.
 
-Produtividade e colaboração: `visoes_salvas`, `delegacoes`.
+Produtividade: `visoes_salvas`.
 
 Detalhes em `backend/database/migrations/`.
 

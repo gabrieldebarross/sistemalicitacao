@@ -131,7 +131,7 @@ export default function PerfilPage() {
                 onChange={(evento) => setEmail(evento.target.value)}
               />
             </Campo>
-            <div className="text-sm text-slate-500">
+            <div className="text-sm text-tinta-500">
               <p>Cargo: {perfil.cargo?.nome ?? 'Não definido'}</p>
               <p>Papéis: {perfil.roles.join(', ') || 'Sem papel'}</p>
             </div>
@@ -221,16 +221,16 @@ export default function PerfilPage() {
       <Cartao>
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
           <div>
-            <h2 className="font-semibold text-slate-900">
+            <h2 className="font-semibold text-tinta-950">
               Segurança e sessões
             </h2>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-tinta-500">
               Consulte o status do MFA e revogue dispositivos com acesso ativo.
             </p>
           </div>
           <Link
             href="/perfil/seguranca"
-            className="text-sm font-medium text-sky-800 hover:underline"
+            className="text-sm font-medium text-rota-800 hover:underline"
           >
             Abrir segurança
           </Link>

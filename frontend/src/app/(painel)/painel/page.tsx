@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import {
   AlertaErro,
   CabecalhoCartao,
+  CabecalhoPagina,
   Campo,
   Carregando,
   Cartao,
@@ -126,7 +127,7 @@ export default function PainelPage() {
     return (
       <Cartao>
         <CabecalhoCartao titulo="Painel" />
-        <p className="px-4 py-6 text-sm text-slate-600">
+        <p className="px-4 py-6 text-sm text-tinta-600">
           Você não possui permissão para visualizar indicadores.
         </p>
       </Cartao>
@@ -154,15 +155,16 @@ export default function PainelPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-800">Painel</h1>
-        <p className="text-sm text-slate-500">
-          Visão gerencial dos processos de contratação. Os indicadores respeitam
-          os filtros aplicados.
-        </p>
-      </div>
+      <CabecalhoPagina
+        titulo="Painel"
+        descricao="Visão gerencial dos processos de contratação. Os indicadores respeitam os filtros aplicados."
+      />
 
-      <Cartao className="px-4 py-4">
+      <Cartao className="px-5 py-5">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="h-1 w-7 rounded-full bg-sinal-500" aria-hidden="true" />
+          <h2 className="text-sm font-semibold text-tinta-900">Filtros do painel</h2>
+        </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Campo rotulo="Tipo de processo" htmlFor="filtro-tipo">
             <Selecao
@@ -239,13 +241,21 @@ export default function PainelPage() {
         <>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {indicadores.map((item) => (
-              <Cartao key={item.rotulo} className="px-4 py-4">
-                <p className="text-sm text-slate-500">{item.rotulo}</p>
+              <Cartao key={item.rotulo} className="relative px-5 py-4">
+                <span
+                  className={`absolute inset-x-0 top-0 h-[3px] ${
+                    item.destaque ? 'bg-red-500' : 'bg-rota-600'
+                  }`}
+                  aria-hidden="true"
+                />
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-tinta-600">
+                  {item.rotulo}
+                </p>
                 <p
                   className={
                     item.destaque
-                      ? 'text-2xl font-semibold text-red-700'
-                      : 'text-2xl font-semibold text-slate-800'
+                      ? 'tabular mt-3 text-3xl font-semibold tracking-tight text-red-700'
+                      : 'tabular mt-3 text-3xl font-semibold tracking-tight text-tinta-950'
                   }
                 >
                   {item.valor}
@@ -257,9 +267,9 @@ export default function PainelPage() {
           <div className="grid gap-4 lg:grid-cols-2">
             <Cartao>
               <CabecalhoCartao titulo="Por situação" />
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-papel-100">
                 {resumo.porStatus.length === 0 ? (
-                  <li className="px-4 py-4 text-sm text-slate-500">
+                  <li className="px-4 py-4 text-sm text-tinta-500">
                     Nenhum processo no filtro atual.
                   </li>
                 ) : (
@@ -268,7 +278,7 @@ export default function PainelPage() {
                       key={item.status}
                       className="flex items-center justify-between px-4 py-3 text-sm"
                     >
-                      <span className="text-slate-700">
+                      <span className="text-tinta-700">
                         {ROTULOS_STATUS_PROCESSO[item.status] ?? item.status}
                       </span>
                       <Etiqueta tom="info">{item.total}</Etiqueta>
@@ -280,9 +290,9 @@ export default function PainelPage() {
 
             <Cartao>
               <CabecalhoCartao titulo="Por tipo de processo" />
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-papel-100">
                 {resumo.porTipoProcesso.length === 0 ? (
-                  <li className="px-4 py-4 text-sm text-slate-500">
+                  <li className="px-4 py-4 text-sm text-tinta-500">
                     Nenhum tipo cadastrado.
                   </li>
                 ) : (
@@ -291,7 +301,7 @@ export default function PainelPage() {
                       key={item.tipo}
                       className="flex items-center justify-between px-4 py-3 text-sm"
                     >
-                      <span className="text-slate-700">{item.tipo}</span>
+                      <span className="text-tinta-700">{item.tipo}</span>
                       <Etiqueta tom="neutro">{item.total}</Etiqueta>
                     </li>
                   ))
@@ -301,9 +311,9 @@ export default function PainelPage() {
 
             <Cartao>
               <CabecalhoCartao titulo="Etapas atuais (estoque)" />
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-papel-100">
                 {resumo.porEtapaAtual.length === 0 ? (
-                  <li className="px-4 py-4 text-sm text-slate-500">
+                  <li className="px-4 py-4 text-sm text-tinta-500">
                     Nenhuma etapa em andamento no filtro atual.
                   </li>
                 ) : (
@@ -312,7 +322,7 @@ export default function PainelPage() {
                       key={item.etapa}
                       className="flex items-center justify-between px-4 py-3 text-sm"
                     >
-                      <span className="text-slate-700">{item.etapa}</span>
+                      <span className="text-tinta-700">{item.etapa}</span>
                       <Etiqueta tom="info">{item.total}</Etiqueta>
                     </li>
                   ))
@@ -324,7 +334,7 @@ export default function PainelPage() {
               <CabecalhoCartao titulo="Gargalos (tempo médio por etapa)" />
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
-                  <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
+                  <thead className="border-b border-linha-200 text-xs uppercase text-tinta-500">
                     <tr>
                       <th className="px-4 py-2">Etapa</th>
                       <th className="px-4 py-2">Concluídas</th>
@@ -332,12 +342,12 @@ export default function PainelPage() {
                       <th className="px-4 py-2">Máximo</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-papel-100">
                     {resumo.gargalos.length === 0 ? (
                       <tr>
                         <td
                           colSpan={4}
-                          className="px-4 py-4 text-sm text-slate-500"
+                          className="px-4 py-4 text-sm text-tinta-500"
                         >
                           Ainda não há etapas concluídas suficientes.
                         </td>
@@ -345,16 +355,16 @@ export default function PainelPage() {
                     ) : (
                       resumo.gargalos.map((item) => (
                         <tr key={item.etapa}>
-                          <td className="px-4 py-3 text-slate-700">
+                          <td className="px-4 py-3 text-tinta-700">
                             {item.etapa}
                           </td>
-                          <td className="px-4 py-3 text-slate-600">
+                          <td className="px-4 py-3 text-tinta-600">
                             {item.total}
                           </td>
-                          <td className="px-4 py-3 text-slate-600">
+                          <td className="px-4 py-3 text-tinta-600">
                             {item.mediaDias} d
                           </td>
-                          <td className="px-4 py-3 text-slate-600">
+                          <td className="px-4 py-3 text-tinta-600">
                             {item.maxDias} d
                           </td>
                         </tr>

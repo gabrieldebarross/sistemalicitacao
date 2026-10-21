@@ -23,7 +23,11 @@ import {
   limparCookieDesafioMfa,
   limparCookiesSessao,
 } from '../utils/cookies.js';
-import { AuthenticationError, ConflictError } from '../errors/app-error.js';
+import {
+  AuthenticationError,
+  ConflictError,
+  MfaChallengeError,
+} from '../errors/app-error.js';
 import { responderOk } from '../utils/http.js';
 import { verificarAccessToken, verificarDesafioMfa } from '../utils/jwt.js';
 import { validar } from '../utils/validation.js';
@@ -44,7 +48,7 @@ function exigirDesafio(req: Request): {
   const token = getCookie(req, MFA_COOKIE);
   const desafio = token ? verificarDesafioMfa(token) : null;
   if (!desafio) {
-    throw new AuthenticationError(
+    throw new MfaChallengeError(
       'Desafio de MFA expirado. Faça login novamente.',
     );
   }
@@ -142,46 +146,68 @@ export async function alterarSenha(
   responderOk(res, { mensagem: 'Senha alterada com sucesso.' });
 }
 
+/**
+ * Executa um passo de MFA. Quando o desafio deixa de ser válido, remove os
+ * cookies de desafio e de sessão para que o navegador volte ao login.
+ */
+async function executarPassoMfa(
+  res: Response,
+  passo: () => Promise<void>,
+): Promise<void> {
+  try {
+    await passo();
+  } catch (erro) {
+    if (erro instanceof MfaChallengeError) {
+      limparCookiesSessao(res);
+    }
+    throw erro;
+  }
+}
+
 export async function iniciarMfa(
   req: Request,
   res: Response,
 ): Promise<void> {
-  const desafio = exigirDesafio(req);
-  if (!desafio.setup) {
-    throw new ConflictError('MFA já está configurado para este usuário.');
-  }
-  const configuracao = await authService.iniciarConfiguracaoMfa(
-    desafio.sid,
-    desafio.sub,
-  );
-  responderOk(res, configuracao);
+  await executarPassoMfa(res, async () => {
+    const desafio = exigirDesafio(req);
+    if (!desafio.setup) {
+      throw new ConflictError('MFA já está configurado para este usuário.');
+    }
+    const configuracao = await authService.iniciarConfiguracaoMfa(
+      desafio.sid,
+      desafio.sub,
+    );
+    responderOk(res, configuracao);
+  });
 }
 
 export async function confirmarMfa(
   req: Request,
   res: Response,
 ): Promise<void> {
-  const desafio = exigirDesafio(req);
-  if (!desafio.setup) {
-    throw new ConflictError('Esta sessão não está em configuração de MFA.');
-  }
-  const { codigo } = validar(mfaCodigoSchema, req.body);
-  const resultado = await authService.confirmarConfiguracaoMfa(
-    desafio.sid,
-    desafio.sub,
-    codigo,
-    contextoDe(req, res),
-  );
-  const csrfToken = definirCookiesSessao(
-    res,
-    resultado.accessToken,
-    resultado.refreshToken,
-  );
-  limparCookieDesafioMfa(res);
-  responderOk(res, {
-    perfil: resultado.perfil,
-    csrfToken,
-    codigosRecuperacao: resultado.codigosRecuperacao,
+  await executarPassoMfa(res, async () => {
+    const desafio = exigirDesafio(req);
+    if (!desafio.setup) {
+      throw new ConflictError('Esta sessão não está em configuração de MFA.');
+    }
+    const { codigo } = validar(mfaCodigoSchema, req.body);
+    const resultado = await authService.confirmarConfiguracaoMfa(
+      desafio.sid,
+      desafio.sub,
+      codigo,
+      contextoDe(req, res),
+    );
+    const csrfToken = definirCookiesSessao(
+      res,
+      resultado.accessToken,
+      resultado.refreshToken,
+    );
+    limparCookieDesafioMfa(res);
+    responderOk(res, {
+      perfil: resultado.perfil,
+      csrfToken,
+      codigosRecuperacao: resultado.codigosRecuperacao,
+    });
   });
 }
 
@@ -189,24 +215,26 @@ export async function verificarMfa(
   req: Request,
   res: Response,
 ): Promise<void> {
-  const desafio = exigirDesafio(req);
-  if (desafio.setup) {
-    throw new ConflictError('Conclua a configuração de MFA antes de entrar.');
-  }
-  const { codigo } = validar(mfaCodigoSchema, req.body);
-  const resultado = await authService.verificarDesafioMfa(
-    desafio.sid,
-    desafio.sub,
-    codigo,
-    contextoDe(req, res),
-  );
-  const csrfToken = definirCookiesSessao(
-    res,
-    resultado.accessToken,
-    resultado.refreshToken,
-  );
-  limparCookieDesafioMfa(res);
-  responderOk(res, { perfil: resultado.perfil, csrfToken });
+  await executarPassoMfa(res, async () => {
+    const desafio = exigirDesafio(req);
+    if (desafio.setup) {
+      throw new ConflictError('Conclua a configuração de MFA antes de entrar.');
+    }
+    const { codigo } = validar(mfaCodigoSchema, req.body);
+    const resultado = await authService.verificarDesafioMfa(
+      desafio.sid,
+      desafio.sub,
+      codigo,
+      contextoDe(req, res),
+    );
+    const csrfToken = definirCookiesSessao(
+      res,
+      resultado.accessToken,
+      resultado.refreshToken,
+    );
+    limparCookieDesafioMfa(res);
+    responderOk(res, { perfil: resultado.perfil, csrfToken });
+  });
 }
 
 export async function listarSessoes(

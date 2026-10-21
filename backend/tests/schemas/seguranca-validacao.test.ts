@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { env } from '../../src/config/env.js';
 import {
   alterarSenhaSchema,
-  criarDelegacaoSchema,
   criarUsuarioSchema,
   listarTarefaQuerySchema,
   mfaCodigoSchema,
@@ -57,38 +56,6 @@ describe('código MFA', () => {
 
   it('rejeita código curto', () => {
     expect(() => mfaCodigoSchema.parse({ codigo: '123' })).toThrow();
-  });
-});
-
-describe('delegações', () => {
-  it('aceita delegação com período válido', () => {
-    const dados = criarDelegacaoSchema.parse({
-      destinoUsuarioId: '2',
-      inicioEm: '2026-01-01T10:00:00.000Z',
-      fimEm: '2026-01-02T10:00:00.000Z',
-      motivo: 'Férias do responsável',
-    });
-    expect(dados.destinoUsuarioId).toBe(2);
-    expect(dados.fimEm.getTime()).toBeGreaterThan(dados.inicioEm.getTime());
-  });
-
-  it('rejeita período invertido e destino inválido', () => {
-    expect(() =>
-      criarDelegacaoSchema.parse({
-        destinoUsuarioId: 2,
-        inicioEm: '2026-01-02T10:00:00.000Z',
-        fimEm: '2026-01-01T10:00:00.000Z',
-        motivo: 'Férias',
-      }),
-    ).toThrow();
-    expect(() =>
-      criarDelegacaoSchema.parse({
-        destinoUsuarioId: 0,
-        inicioEm: '2026-01-01T10:00:00.000Z',
-        fimEm: '2026-01-02T10:00:00.000Z',
-        motivo: 'Férias',
-      }),
-    ).toThrow();
   });
 });
 

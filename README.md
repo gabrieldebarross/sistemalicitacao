@@ -1,7 +1,8 @@
-# Sistema de Gestão de Licitações e Contratações Públicas
+# TramitaY — Gestão de licitações e contratações públicas
 
-Sistema web para gestão, acompanhamento e supervisão de processos de licitação e
-contratação pública de uma autarquia municipal brasileira.
+O **TramitaY** é uma plataforma web para gestão, acompanhamento e supervisão de
+processos de licitação e contratação pública de uma autarquia municipal
+brasileira.
 
 O sistema é uma **ferramenta de gestão**. Não substitui análise jurídica, sistemas
 oficiais de publicação, portais governamentais ou decisões administrativas
@@ -28,11 +29,14 @@ Routes → Middlewares → Controllers → Application Services → Domain → R
 ```text
 sistema_licitacao/
 ├── AGENTS.md            # regras permanentes para agentes de IA
+├── PRODUCT.md           # verdade de produto, usuários e marca
+├── DESIGN.md            # sistema visual, tokens e padrões de interface
 ├── opencode.json        # permissões/guardrails do OpenCode
 ├── pnpm-workspace.yaml
 ├── .env.example         # modelo de variáveis (sem valores reais)
 ├── docs/                # documentação (arquitetura, domínio, RBAC, workflows...)
 ├── .opencode/skills/    # skills especializadas
+├── .agents/skills/      # skills de design carregadas pelo agente
 ├── backend/             # API (Node.js + TypeScript + Express + Sequelize + MySQL)
 │   ├── src/
 │   ├── database/        # migrations e seeders

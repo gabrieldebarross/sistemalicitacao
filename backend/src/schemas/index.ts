@@ -268,28 +268,6 @@ export const atualizarVisaoSchema = z.object({
   filtros: filtrosVisaoSchema.optional(),
 });
 
-export const criarDelegacaoSchema = z
-  .object({
-    destinoUsuarioId: z.coerce.number().int().positive(),
-    processoId: z.coerce.number().int().positive().nullable().optional(),
-    inicioEm: z.coerce.date(),
-    fimEm: z.coerce.date(),
-    motivo: z.string().trim().min(5, 'Informe o motivo.').max(500),
-  })
-  .superRefine((dados, contexto) => {
-    if (dados.fimEm <= dados.inicioEm) {
-      contexto.addIssue({
-        code: 'custom',
-        path: ['fimEm'],
-        message: 'O fim da delegação deve ser posterior ao início.',
-      });
-    }
-  });
-
-export const listarDelegacaoQuerySchema = paginacaoSchema.extend({
-  incluirHistorico: booleanoQuery,
-});
-
 export const listarTarefaQuerySchema = paginacaoSchema.extend({
   atrasado: booleanoQuery,
   status: z

@@ -96,6 +96,18 @@ async function enviar(
   return { resposta, json };
 }
 
+export const EVENTO_SESSAO_EXPIRADA = 'tramitay:sessao-expirada';
+
+function notificarSessaoExpirada(): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+  window.dispatchEvent(new Event(EVENTO_SESSAO_EXPIRADA));
+  if (window.location.pathname !== '/login') {
+    window.location.replace('/login?motivo=sessao-expirada');
+  }
+}
+
 let renovacaoEmAndamento: Promise<boolean> | null = null;
 
 async function renovarSessao(): Promise<boolean> {
@@ -155,6 +167,9 @@ async function requisitar<T>(
       window.location.pathname !== '/trocar-senha'
     ) {
       window.location.assign('/trocar-senha');
+    }
+    if (resposta.status === 401 && podeRenovar(caminho)) {
+      notificarSessaoExpirada();
     }
     throw new ApiError(mensagem, resposta.status, codigo, detalhes);
   }

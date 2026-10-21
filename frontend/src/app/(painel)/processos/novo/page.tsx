@@ -8,6 +8,7 @@ import {
   AreaTexto,
   Botao,
   CabecalhoCartao,
+  CabecalhoPagina,
   Campo,
   Cartao,
   Entrada,
@@ -159,13 +160,10 @@ export default function NovoProcessoPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-800">Novo processo</h1>
-        <p className="text-sm text-slate-500">
-          O processo é instanciado a partir de um fluxo publicado do tipo
-          escolhido.
-        </p>
-      </div>
+      <CabecalhoPagina
+        titulo="Novo processo"
+        descricao="O processo é instanciado a partir de um fluxo publicado do tipo escolhido."
+      />
 
       <Cartao className="max-w-2xl">
         <CabecalhoCartao titulo="Dados do processo" />
@@ -246,12 +244,12 @@ export default function NovoProcessoPage() {
             </Selecao>
           </Campo>
           {etapasCondicionais.length > 0 ? (
-            <div className="flex flex-col gap-4 rounded-lg border border-sky-200 bg-sky-50/60 px-4 py-4">
+            <div className="flex flex-col gap-4 rounded-lg border border-rota-200 bg-rota-50/60 px-4 py-4">
               <div>
-                <h2 className="text-sm font-semibold text-slate-800">
+                <h2 className="text-sm font-semibold text-tinta-800">
                   Etapas condicionais
                 </h2>
-                <p className="text-xs text-slate-600">
+                <p className="text-xs text-tinta-600">
                   O fluxo possui etapas cuja aplicabilidade depende do caso
                   concreto. Informe explicitamente cada uma. As etapas não
                   aplicáveis serão registradas como puladas com a justificativa.
@@ -265,19 +263,19 @@ export default function NovoProcessoPage() {
                 return (
                   <div
                     key={etapa.id}
-                    className="flex flex-col gap-2 rounded border border-sky-100 bg-white px-3 py-3"
+                    className="flex flex-col gap-2 rounded border border-rota-100 bg-white px-3 py-3"
                   >
-                    <p className="text-sm font-medium text-slate-800">
+                    <p className="text-sm font-medium text-tinta-800">
                       {etapa.sequencia}. {etapa.nome}
                       {etapa.faseNome ? (
-                        <span className="font-normal text-slate-500">
+                        <span className="font-normal text-tinta-500">
                           {' '}
                           · {etapa.faseNome}
                         </span>
                       ) : null}
                     </p>
                     {etapa.condicaoAplicabilidade ? (
-                      <p className="text-xs text-slate-600">
+                      <p className="text-xs text-tinta-600">
                         Condição: {etapa.condicaoAplicabilidade}
                       </p>
                     ) : null}

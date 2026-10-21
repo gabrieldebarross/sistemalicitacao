@@ -1,8 +1,8 @@
 {
-  "name": "sistema-licitacao-backend",
+  "name": "tramitay-backend",
   "version": "0.1.0",
   "private": true,
-  "description": "Backend do Sistema de Gestão de Licitações e Contratações Públicas.",
+  "description": "Backend do TramitaY, plataforma de gestão de licitações e contratações públicas.",
   "type": "module",
   "main": "dist/server.js",
   "scripts": {

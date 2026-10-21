@@ -1,4 +1,4 @@
-# Frontend — Sistema de Gestão de Licitações
+# Frontend — TramitaY
 
 Interface administrativa em **Next.js (App Router) + React + TypeScript +
 Tailwind CSS**. Consome a API do backend (`backend/`).

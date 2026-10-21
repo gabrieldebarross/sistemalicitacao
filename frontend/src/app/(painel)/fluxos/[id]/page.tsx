@@ -193,7 +193,7 @@ export default function FluxoDetalhePage() {
       <div>
         <Link
           href="/fluxos"
-          className="inline-flex items-center gap-1 text-sm text-sky-800 hover:underline"
+          className="inline-flex items-center gap-1 text-sm text-rota-800 hover:underline"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Voltar para fluxos
@@ -202,8 +202,14 @@ export default function FluxoDetalhePage() {
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">{fluxo.nome}</h1>
-          <p className="text-sm text-slate-500">
+          <span
+            className="mb-2 block h-1 w-9 rounded-full bg-sinal-500"
+            aria-hidden="true"
+          />
+          <h1 className="text-[1.65rem] font-semibold leading-tight tracking-[-0.02em] text-tinta-950">
+            {fluxo.nome}
+          </h1>
+          <p className="text-sm leading-relaxed text-tinta-600">
             {fluxo.tipoProcessoNome ?? '—'} · versão {fluxo.versao}
           </p>
           <div className="mt-2">
@@ -273,7 +279,7 @@ export default function FluxoDetalhePage() {
       {fluxo.fases.length === 0 ? (
         <Cartao>
           <CabecalhoCartao titulo="Fases e etapas" />
-          <p className="px-4 py-6 text-sm text-slate-500">
+          <p className="px-4 py-6 text-sm text-tinta-500">
             Nenhuma fase cadastrada. Adicione fases e etapas para poder publicar.
           </p>
         </Cartao>
@@ -320,21 +326,21 @@ export default function FluxoDetalhePage() {
               }
             />
             {fase.etapas.length === 0 ? (
-              <p className="px-4 py-4 text-sm text-slate-500">
+              <p className="px-4 py-4 text-sm text-tinta-500">
                 Nenhuma etapa nesta fase.
               </p>
             ) : (
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-papel-100">
                 {fase.etapas.map((etapa) => (
                   <li
                     key={etapa.id}
                     className="flex flex-wrap items-start justify-between gap-2 px-4 py-3"
                   >
                     <div>
-                      <p className="text-sm font-medium text-slate-800">
+                      <p className="text-sm font-medium text-tinta-800">
                         {etapa.ordem}. {etapa.nome}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-tinta-500">
                         {etapa.obrigatoria ? 'Obrigatória' : 'Opcional'}
                         {etapa.obrigatoria && etapa.permitePulo
                           ? ' · permite pulo'
@@ -356,12 +362,12 @@ export default function FluxoDetalhePage() {
                           : ''}
                       </p>
                       {etapa.condicional && etapa.condicaoAplicabilidade ? (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-tinta-500">
                           Condição: {etapa.condicaoAplicabilidade}
                         </p>
                       ) : null}
                       {etapa.descricao ? (
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-tinta-500">
                           {etapa.descricao}
                         </p>
                       ) : null}
@@ -667,7 +673,7 @@ export default function FluxoDetalhePage() {
                 </Selecao>
               </Campo>
             ) : null}
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-tinta-700">
               <input
                 type="checkbox"
                 checked={formEtapa.obrigatoria}
@@ -680,7 +686,7 @@ export default function FluxoDetalhePage() {
               />
               Etapa obrigatória
             </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-tinta-700">
               <input
                 type="checkbox"
                 checked={formEtapa.permitePulo}
@@ -694,7 +700,7 @@ export default function FluxoDetalhePage() {
               />
               Permite pulo com justificativa (etapa obrigatória)
             </label>
-            <label className="flex items-center gap-2 text-sm text-slate-700">
+            <label className="flex items-center gap-2 text-sm text-tinta-700">
               <input
                 type="checkbox"
                 checked={formEtapa.condicional}
@@ -792,12 +798,12 @@ export default function FluxoDetalhePage() {
         }
       >
         {confirmacao === 'clonar' ? (
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-tinta-600">
             Será criada uma nova versão em rascunho deste fluxo, com as mesmas
             fases e etapas. A versão atual não é alterada. Deseja continuar?
           </p>
         ) : (
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-tinta-600">
             O fluxo será arquivado e não poderá ser usado em novos processos.
             Processos existentes preservam o histórico. O arquivamento é
             bloqueado se houver processos em rascunho, em andamento ou

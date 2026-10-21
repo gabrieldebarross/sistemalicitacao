@@ -55,6 +55,19 @@ export async function atualizar(
   return sessao.update(dados, transaction ? { transaction } : {});
 }
 
+/**
+ * Incrementa atomicamente as tentativas de MFA e devolve o valor gravado.
+ * Evita que requisições concorrentes ultrapassem o limite.
+ */
+export async function incrementarTentativasMfa(id: string): Promise<number> {
+  await Sessao.increment('mfaTentativas', {
+    by: 1,
+    where: { id, revogadaEm: null, estado: 'MFA_PENDENTE' },
+  });
+  const sessao = await buscarPorId(id);
+  return sessao?.mfaTentativas ?? 0;
+}
+
 export async function revogar(
   id: string,
   quando: Date,

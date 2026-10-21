@@ -1,12 +1,19 @@
 'use client';
 
-import { Bookmark, Plus, Trash2 } from 'lucide-react';
+import {
+  Bookmark,
+  Plus,
+  RotateCcw,
+  SlidersHorizontal,
+  Trash2,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 
 import {
   AlertaErro,
   Botao,
+  CabecalhoPagina,
   Campo,
   Carregando,
   Cartao,
@@ -238,171 +245,206 @@ export default function ProcessosPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-800">Processos</h1>
-          <p className="text-sm text-slate-500">
-            Acompanhamento dos processos de contratação.
-          </p>
-        </div>
-        {temPermissao('processos.create') ? (
-          <Link href="/processos/novo">
-            <Botao>
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              Novo processo
-            </Botao>
-          </Link>
-        ) : null}
-      </div>
+      <CabecalhoPagina
+        titulo="Processos"
+        descricao="Acompanhe etapas, responsáveis e prazos de cada contratação."
+        acao={
+          temPermissao('processos.create') ? (
+            <Link href="/processos/novo">
+              <Botao>
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                Novo processo
+              </Botao>
+            </Link>
+          ) : null
+        }
+      />
 
       <Cartao>
-        <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3">
-          <div className="flex flex-wrap gap-3">
-            <Entrada
-              placeholder="Buscar por nome, número ou objeto"
-              aria-label="Buscar processos"
-              value={filtros.busca}
-              onChange={(evento) =>
-                atualizarFiltro('busca', evento.target.value)
-              }
-              className="max-w-xs"
-            />
-            <Selecao
-              aria-label="Filtrar por situação"
-              value={filtros.status}
-              onChange={(evento) =>
-                atualizarFiltro('status', evento.target.value)
-              }
-              className="max-w-48"
-            >
-              <option value="">Todas as situações</option>
-              {Object.entries(ROTULOS_STATUS_PROCESSO).map(([valor, rotulo]) => (
-                <option key={valor} value={valor}>
-                  {rotulo}
-                </option>
-              ))}
-            </Selecao>
-            <Selecao
-              aria-label="Filtrar por tipo"
-              value={filtros.tipoId}
-              onChange={(evento) =>
-                atualizarFiltro('tipoId', evento.target.value)
-              }
-              className="max-w-64"
-            >
-              <option value="">Todos os tipos</option>
-              {tipos.map((tipo) => (
-                <option key={tipo.id} value={tipo.id}>
-                  {tipo.nome}
-                </option>
-              ))}
-            </Selecao>
-            <Selecao
-              aria-label="Filtrar por setor"
-              value={filtros.setorId}
-              onChange={(evento) =>
-                atualizarFiltro('setorId', evento.target.value)
-              }
-              className="max-w-64"
-            >
-              <option value="">Todos os setores</option>
-              {setores.map((setor) => (
-                <option key={setor.id} value={setor.id}>
-                  {setor.nome}
-                </option>
-              ))}
-            </Selecao>
-            <Selecao
-              aria-label="Filtrar por responsável"
-              value={filtros.responsavelId}
-              onChange={(evento) =>
-                atualizarFiltro('responsavelId', evento.target.value)
-              }
-              className="max-w-64"
-            >
-              <option value="">Todos os responsáveis</option>
-              {usuarios.map((usuario) => (
-                <option key={usuario.id} value={usuario.id}>
-                  {usuario.nome}
-                </option>
-              ))}
-            </Selecao>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <Entrada
-                type="checkbox"
-                className="h-4 w-4"
-                checked={filtros.atrasado}
-                onChange={(evento) =>
-                  atualizarFiltro('atrasado', evento.target.checked)
-                }
+        <div className="border-b border-linha-200 bg-papel-50/50 px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <SlidersHorizontal
+                className="h-4 w-4 text-tinta-500"
+                aria-hidden="true"
               />
-              Somente atrasados
-            </label>
-            <Campo rotulo="Criado de" htmlFor="criado-de">
-              <Entrada
-                id="criado-de"
-                type="date"
-                value={filtros.criadoDe}
-                onChange={(evento) =>
-                  atualizarFiltro('criadoDe', evento.target.value)
-                }
-              />
-            </Campo>
-            <Campo rotulo="Criado até" htmlFor="criado-ate">
-              <Entrada
-                id="criado-ate"
-                type="date"
-                value={filtros.criadoAte}
-                onChange={(evento) =>
-                  atualizarFiltro('criadoAte', evento.target.value)
-                }
-              />
-            </Campo>
-            <Selecao
-              aria-label="Ordenar por"
-              value={filtros.ordenarPor}
-              onChange={(evento) =>
-                atualizarFiltro('ordenarPor', evento.target.value)
-              }
-              className="max-w-48"
-            >
-              <option value="">Ordem padrão</option>
-              <option value="numero">Número</option>
-              <option value="nome">Nome</option>
-              <option value="created_at">Data de criação</option>
-              <option value="data_prevista">Prazo da etapa atual</option>
-              <option value="status">Situação</option>
-            </Selecao>
-            <Selecao
-              aria-label="Direção da ordenação"
-              value={filtros.direcao}
-              onChange={(evento) =>
-                atualizarFiltro('direcao', evento.target.value)
-              }
-              className="max-w-36"
-            >
-              <option value="">Direção</option>
-              <option value="asc">Crescente</option>
-              <option value="desc">Decrescente</option>
-            </Selecao>
+              <h2 className="text-sm font-semibold text-tinta-900">Filtros</h2>
+            </div>
             <Botao variante="sutil" onClick={limparFiltros}>
+              <RotateCcw className="h-4 w-4" aria-hidden="true" />
               Limpar filtros
             </Botao>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-            <span className="flex items-center gap-1 text-sm font-medium text-slate-700">
-              <Bookmark className="h-4 w-4" aria-hidden="true" />
-              Visões salvas:
+          <div className="mt-4 grid grid-cols-1 gap-x-3 gap-y-4 sm:grid-cols-2 lg:grid-cols-12">
+            <div className="sm:col-span-2 lg:col-span-4">
+              <Campo rotulo="Buscar" htmlFor="filtro-busca">
+                <Entrada
+                  id="filtro-busca"
+                  placeholder="Nome, número ou objeto"
+                  value={filtros.busca}
+                  onChange={(evento) =>
+                    atualizarFiltro('busca', evento.target.value)
+                  }
+                />
+              </Campo>
+            </div>
+            <div className="lg:col-span-2">
+              <Campo rotulo="Situação" htmlFor="filtro-status">
+                <Selecao
+                  id="filtro-status"
+                  value={filtros.status}
+                  onChange={(evento) =>
+                    atualizarFiltro('status', evento.target.value)
+                  }
+                >
+                  <option value="">Todas</option>
+                  {Object.entries(ROTULOS_STATUS_PROCESSO).map(
+                    ([valor, rotulo]) => (
+                      <option key={valor} value={valor}>
+                        {rotulo}
+                      </option>
+                    ),
+                  )}
+                </Selecao>
+              </Campo>
+            </div>
+            <div className="lg:col-span-3">
+              <Campo rotulo="Tipo de processo" htmlFor="filtro-tipo">
+                <Selecao
+                  id="filtro-tipo"
+                  value={filtros.tipoId}
+                  onChange={(evento) =>
+                    atualizarFiltro('tipoId', evento.target.value)
+                  }
+                >
+                  <option value="">Todos os tipos</option>
+                  {tipos.map((tipo) => (
+                    <option key={tipo.id} value={tipo.id}>
+                      {tipo.nome}
+                    </option>
+                  ))}
+                </Selecao>
+              </Campo>
+            </div>
+            <div className="lg:col-span-3">
+              <Campo rotulo="Setor atual" htmlFor="filtro-setor">
+                <Selecao
+                  id="filtro-setor"
+                  value={filtros.setorId}
+                  onChange={(evento) =>
+                    atualizarFiltro('setorId', evento.target.value)
+                  }
+                >
+                  <option value="">Todos os setores</option>
+                  {setores.map((setor) => (
+                    <option key={setor.id} value={setor.id}>
+                      {setor.nome}
+                    </option>
+                  ))}
+                </Selecao>
+              </Campo>
+            </div>
+            <div className="lg:col-span-3">
+              <Campo rotulo="Responsável atual" htmlFor="filtro-responsavel">
+                <Selecao
+                  id="filtro-responsavel"
+                  value={filtros.responsavelId}
+                  onChange={(evento) =>
+                    atualizarFiltro('responsavelId', evento.target.value)
+                  }
+                >
+                  <option value="">Todos os responsáveis</option>
+                  {usuarios.map((usuario) => (
+                    <option key={usuario.id} value={usuario.id}>
+                      {usuario.nome}
+                    </option>
+                  ))}
+                </Selecao>
+              </Campo>
+            </div>
+            <div className="lg:col-span-2">
+              <Campo rotulo="Criado de" htmlFor="criado-de">
+                <Entrada
+                  id="criado-de"
+                  type="date"
+                  value={filtros.criadoDe}
+                  onChange={(evento) =>
+                    atualizarFiltro('criadoDe', evento.target.value)
+                  }
+                />
+              </Campo>
+            </div>
+            <div className="lg:col-span-2">
+              <Campo rotulo="Criado até" htmlFor="criado-ate">
+                <Entrada
+                  id="criado-ate"
+                  type="date"
+                  value={filtros.criadoAte}
+                  onChange={(evento) =>
+                    atualizarFiltro('criadoAte', evento.target.value)
+                  }
+                />
+              </Campo>
+            </div>
+            <div className="lg:col-span-3">
+              <Campo rotulo="Ordenar por" htmlFor="filtro-ordenar">
+                <Selecao
+                  id="filtro-ordenar"
+                  value={filtros.ordenarPor}
+                  onChange={(evento) =>
+                    atualizarFiltro('ordenarPor', evento.target.value)
+                  }
+                >
+                  <option value="">Ordem padrão</option>
+                  <option value="numero">Número</option>
+                  <option value="nome">Nome</option>
+                  <option value="created_at">Data de criação</option>
+                  <option value="data_prevista">Prazo da etapa atual</option>
+                  <option value="status">Situação</option>
+                </Selecao>
+              </Campo>
+            </div>
+            <div className="lg:col-span-2">
+              <Campo rotulo="Direção" htmlFor="filtro-direcao">
+                <Selecao
+                  id="filtro-direcao"
+                  value={filtros.direcao}
+                  onChange={(evento) =>
+                    atualizarFiltro('direcao', evento.target.value)
+                  }
+                >
+                  <option value="">Padrão</option>
+                  <option value="asc">Crescente</option>
+                  <option value="desc">Decrescente</option>
+                </Selecao>
+              </Campo>
+            </div>
+            <div className="flex items-end pb-1 lg:col-span-3">
+              <label className="flex min-h-10 cursor-pointer items-center gap-2.5 rounded-lg border border-linha-200 bg-white px-3 text-sm font-medium text-tinta-800">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-linha-300 accent-rota-700"
+                  checked={filtros.atrasado}
+                  onChange={(evento) =>
+                    atualizarFiltro('atrasado', evento.target.checked)
+                  }
+                />
+                Somente atrasados
+              </label>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-linha-200 pt-4">
+            <span className="flex items-center gap-1.5 text-sm font-semibold text-tinta-800">
+              <Bookmark className="h-4 w-4 text-tinta-500" aria-hidden="true" />
+              Visões salvas
             </span>
             <Selecao
               aria-label="Aplicar visão salva"
               value={visaoSelecionada}
               onChange={(evento) => aplicarVisao(evento.target.value)}
-              className="max-w-64"
+              className="w-full max-w-xs"
             >
               <option value="">Selecione uma visão</option>
               {visoes.map((visao) => (
@@ -444,7 +486,7 @@ export default function ProcessosPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
+              <thead className="border-b border-linha-200 text-xs uppercase text-tinta-500">
                 <tr>
                   <th className="px-4 py-2">Processo</th>
                   <th className="px-4 py-2">Situação</th>
@@ -455,17 +497,17 @@ export default function ProcessosPage() {
                   <th className="px-4 py-2">Criado</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-papel-100">
                 {processos.map((processo) => (
-                  <tr key={processo.id} className="hover:bg-slate-50">
+                  <tr key={processo.id} className="hover:bg-papel-50">
                     <td className="px-4 py-3">
                       <Link
                         href={`/processos/${processo.id}`}
-                        className="font-medium text-sky-800 hover:underline"
+                        className="font-medium text-rota-800 hover:underline"
                       >
                         {processo.nome || processo.numero}
                       </Link>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-tinta-500">
                         Nº {processo.numero}
                       </p>
                     </td>
@@ -475,13 +517,13 @@ export default function ProcessosPage() {
                           processo.status}
                       </Etiqueta>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-tinta-600">
                       <p>{processo.responsavelAtual?.nome ?? '—'}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-tinta-500">
                         {processo.setorAtual?.nome ?? 'Sem setor'}
                       </p>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-tinta-600">
                       {processo.etapaAtual?.nome ??
                         (processo.status === 'EM_ANDAMENTO'
                           ? 'Aguardando conclusão do processo'
@@ -489,16 +531,16 @@ export default function ProcessosPage() {
                             ? 'Não iniciado'
                             : '—')}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-tinta-600">
                       <p>{processo.etapaAtual?.responsavel?.nome ?? '—'}</p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-tinta-500">
                         {processo.etapaAtual?.setor?.nome ?? 'Sem setor'}
                       </p>
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-tinta-600">
                       {formatarData(processo.etapaAtual?.dataPrevista ?? null)}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">
+                    <td className="px-4 py-3 text-tinta-600">
                       {formatarData(processo.criadoEm)}
                     </td>
                   </tr>
@@ -509,8 +551,8 @@ export default function ProcessosPage() {
         )}
 
         {paginacao && paginacao.totalPaginas > 1 ? (
-          <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm">
-            <span className="text-slate-500">
+          <div className="flex items-center justify-between border-t border-linha-200 px-4 py-3 text-sm">
+            <span className="text-tinta-500">
               Página {paginacao.pagina} de {paginacao.totalPaginas} (
               {paginacao.total} itens)
             </span>
@@ -563,7 +605,7 @@ export default function ProcessosPage() {
               onChange={(evento) => setNomeVisao(evento.target.value)}
             />
           </Campo>
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-tinta-500">
             A visão é privada e armazena apenas os filtros atuais.
           </p>
         </form>

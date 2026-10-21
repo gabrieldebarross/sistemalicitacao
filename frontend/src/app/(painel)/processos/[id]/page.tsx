@@ -249,7 +249,7 @@ export default function ProcessoDetalhePage() {
       <div>
         <Link
           href="/processos"
-          className="inline-flex items-center gap-1 text-sm text-sky-800 hover:underline"
+          className="inline-flex items-center gap-1 text-sm text-rota-800 hover:underline"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Voltar para processos
@@ -258,17 +258,25 @@ export default function ProcessoDetalhePage() {
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-slate-800">
+          <span
+            className="mb-2 block h-1 w-9 rounded-full bg-sinal-500"
+            aria-hidden="true"
+          />
+          <h1 className="text-[1.65rem] font-semibold leading-tight tracking-[-0.02em] text-tinta-950">
             {processo.nome || processo.numero}
           </h1>
-          <p className="text-sm text-slate-500">Nº {processo.numero}</p>
-          <p className="max-w-2xl text-sm text-slate-600">{processo.objeto}</p>
+          <p className="text-sm leading-relaxed text-tinta-600">
+            Nº {processo.numero}
+          </p>
+          <p className="max-w-2xl text-sm leading-relaxed text-tinta-600">
+            {processo.objeto}
+          </p>
           <div className="mt-2 flex items-center gap-2">
             <Etiqueta tom={TOM_STATUS[status] ?? 'neutro'}>
               {ROTULOS_STATUS_PROCESSO[status] ?? status}
             </Etiqueta>
             {processo.fluxo ? (
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-tinta-500">
                 Fluxo: {processo.fluxo.nome} (v{processo.fluxo.versao})
               </span>
             ) : null}
@@ -330,7 +338,7 @@ export default function ProcessoDetalhePage() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Cartao className="lg:col-span-2">
           <CabecalhoCartao titulo="Etapas" />
-          <ol className="divide-y divide-slate-100">
+          <ol className="divide-y divide-papel-100">
             {processo.etapas.map((etapa) => {
               const ehAtual = etapa.id === etapaAtual?.id;
               const podeConcluir =
@@ -380,15 +388,15 @@ export default function ProcessoDetalhePage() {
               return (
                 <li
                   key={etapa.id}
-                  className={cn('px-4 py-3', ehAtual && 'bg-sky-50/60')}
+                  className={cn('px-4 py-3', ehAtual && 'bg-rota-50/60')}
                 >
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-papel-100 text-xs font-semibold text-tinta-600">
                           {etapa.sequencia}
                         </span>
-                        <p className="font-medium text-slate-800">
+                        <p className="font-medium text-tinta-800">
                           {etapa.nome}
                         </p>
                         <Etiqueta tom={TOM_ETAPA[etapa.status] ?? 'neutro'}>
@@ -396,14 +404,14 @@ export default function ProcessoDetalhePage() {
                         </Etiqueta>
                       </div>
                       {etapa.faseNome ? (
-                        <p className="mt-0.5 text-xs text-slate-500">
+                        <p className="mt-0.5 text-xs text-tinta-500">
                           {etapa.faseNome}
                         </p>
                       ) : null}
-                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                      <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-tinta-500">
                         <span>
                           Responsável:{' '}
-                          <strong className="font-medium text-slate-700">
+                          <strong className="font-medium text-tinta-700">
                             {etapa.responsavel?.nome ?? '—'}
                           </strong>
                         </span>
@@ -425,13 +433,13 @@ export default function ProcessoDetalhePage() {
                         </span>
                       </div>
                       {retorno ? (
-                        <p className="mt-1 text-xs text-sky-800">
+                        <p className="mt-1 text-xs text-rota-800">
                           Após concluir, o processo retorna para a etapa{' '}
                           {retorno.sequencia}. {retorno.nome}.
                         </p>
                       ) : null}
                       {etapa.condicional && etapa.condicaoAplicabilidade ? (
-                        <p className="mt-1 text-xs text-slate-500">
+                        <p className="mt-1 text-xs text-tinta-500">
                           Condição de aplicabilidade:{' '}
                           {etapa.condicaoAplicabilidade}
                         </p>
@@ -442,7 +450,7 @@ export default function ProcessoDetalhePage() {
                         </p>
                       ) : null}
                       {etapa.status === 'PULADA' ? (
-                        <p className="mt-1 text-xs text-slate-600">
+                        <p className="mt-1 text-xs text-tinta-600">
                           Pulada em {formatarDataHora(etapa.puladaEm)}
                           {etapa.motivoPulo
                             ? ` — ${etapa.motivoPulo}`
@@ -518,46 +526,46 @@ export default function ProcessoDetalhePage() {
           <CabecalhoCartao titulo="Resumo" />
           <dl className="flex flex-col gap-3 px-4 py-4 text-sm">
             <div>
-              <dt className="text-slate-500">Tipo</dt>
-              <dd className="text-slate-800">
+              <dt className="text-tinta-500">Tipo</dt>
+              <dd className="text-tinta-800">
                 {processo.tipoProcesso?.nome ?? '—'}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Responsável do processo</dt>
-              <dd className="text-slate-800">
+              <dt className="text-tinta-500">Responsável do processo</dt>
+              <dd className="text-tinta-800">
                 {processo.responsavelAtual?.nome ?? '—'}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Setor responsável do processo</dt>
-              <dd className="text-slate-800">
+              <dt className="text-tinta-500">Setor responsável do processo</dt>
+              <dd className="text-tinta-800">
                 {processo.setorAtual?.nome ?? '—'}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Etapa atual</dt>
-              <dd className="text-slate-800">
+              <dt className="text-tinta-500">Etapa atual</dt>
+              <dd className="text-tinta-800">
                 {processo.etapaAtual?.nome ?? '—'}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">
+              <dt className="text-tinta-500">
                 Responsável da etapa atual
               </dt>
-              <dd className="text-slate-800">
+              <dd className="text-tinta-800">
                 {etapaAtual?.responsavel?.nome ?? '—'}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Setor da etapa atual</dt>
-              <dd className="text-slate-800">
+              <dt className="text-tinta-500">Setor da etapa atual</dt>
+              <dd className="text-tinta-800">
                 {etapaAtual?.setor?.nome ?? '—'}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Prazo da etapa atual</dt>
-              <dd className="text-slate-800">
+              <dt className="text-tinta-500">Prazo da etapa atual</dt>
+              <dd className="text-tinta-800">
                 {formatarData(etapaAtual?.dataPrevista ?? null)}
                 {etapaAtual?.prazoGestaoDias
                   ? ` (${etapaAtual.prazoGestaoDias} dias)`
@@ -565,14 +573,14 @@ export default function ProcessoDetalhePage() {
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Iniciado em</dt>
-              <dd className="text-slate-800">
+              <dt className="text-tinta-500">Iniciado em</dt>
+              <dd className="text-tinta-800">
                 {formatarDataHora(processo.iniciadoEm)}
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Finalizado em</dt>
-              <dd className="text-slate-800">
+              <dt className="text-tinta-500">Finalizado em</dt>
+              <dd className="text-tinta-800">
                 {formatarDataHora(processo.finalizadoEm)}
               </dd>
             </div>
@@ -583,25 +591,25 @@ export default function ProcessoDetalhePage() {
       <Cartao>
         <CabecalhoCartao titulo="Histórico de movimentações" />
         {processo.movimentacoes.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-slate-500">
+          <p className="px-4 py-4 text-sm text-tinta-500">
             Nenhuma movimentação registrada.
           </p>
         ) : (
-          <ol className="divide-y divide-slate-100">
+          <ol className="divide-y divide-papel-100">
             {processo.movimentacoes.map((mov) => (
               <li key={mov.id} className="px-4 py-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-medium text-slate-800">
+                  <span className="font-medium text-tinta-800">
                     {ROTULOS_MOVIMENTACAO[mov.tipo] ?? mov.tipo}
                   </span>
-                  <span className="text-xs text-slate-500">
+                  <span className="text-xs text-tinta-500">
                     {formatarDataHora(mov.criadoEm)}
                   </span>
                 </div>
                 {mov.descricao ? (
-                  <p className="text-slate-600">{mov.descricao}</p>
+                  <p className="text-tinta-600">{mov.descricao}</p>
                 ) : null}
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-tinta-500">
                   {mov.usuario?.nome ?? 'Sistema'}
                   {mov.setor ? ` · ${mov.setor.nome}` : ''}
                 </p>
@@ -674,7 +682,7 @@ export default function ProcessoDetalhePage() {
         }
       >
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-tinta-600">
             Ao concluir novamente a etapa de destino, o processo retornará
             diretamente para a etapa que fez a devolução, sem refazer as etapas
             intermediárias. Você pode escolher qualquer etapa já concluída.
@@ -751,7 +759,7 @@ export default function ProcessoDetalhePage() {
         }
       >
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-tinta-600">
             O prazo é copiado do fluxo na criação do processo, mas pode ser
             ajustado apenas para esta etapa.
           </p>
@@ -805,7 +813,7 @@ export default function ProcessoDetalhePage() {
         }
       >
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-tinta-600">
             O bloqueio interrompe a etapa atual. Informe o motivo; a ação será
             registrada no histórico e na auditoria.
           </p>
@@ -852,7 +860,7 @@ export default function ProcessoDetalhePage() {
         }
       >
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-tinta-600">
             A etapa voltará ao andamento. Informe a justificativa para o
             desbloqueio.
           </p>
@@ -899,7 +907,7 @@ export default function ProcessoDetalhePage() {
         }
       >
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-tinta-600">
             A etapa será registrada como pulada. Se for a etapa atual, o
             processo avança para a próxima etapa não finalizada. A justificativa
             é obrigatória e ficará no histórico.
@@ -942,7 +950,7 @@ export default function ProcessoDetalhePage() {
         }
       >
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-tinta-600">
             A alteração vale apenas para o processo e não modifica o responsável
             das etapas. O setor do processo é independente do usuário escolhido.
           </p>
@@ -1021,7 +1029,7 @@ export default function ProcessoDetalhePage() {
         }
       >
         <div className="flex flex-col gap-4">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-tinta-600">
             A atribuição vale apenas para esta etapa e não altera as demais
             etapas nem o responsável do processo. O setor da etapa acompanha
             automaticamente o setor principal do novo responsável.
@@ -1052,11 +1060,11 @@ export default function ProcessoDetalhePage() {
               ))}
             </Selecao>
           </Campo>
-          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+          <div className="rounded-md border border-linha-200 bg-papel-50 px-3 py-2 text-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-tinta-500">
               Setor da etapa após a atribuição
             </p>
-            <p className="mt-0.5 text-slate-800">
+            <p className="mt-0.5 text-tinta-800">
               {responsavelEtapaId ? nomeSetorPrincipalEtapa : 'Sem setor definido'}
             </p>
           </div>
@@ -1083,7 +1091,7 @@ export default function ProcessoDetalhePage() {
           </>
         }
       >
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-tinta-600">
           O processo voltará ao status <strong>Em andamento</strong> e a etapa
           atual será reaberta para continuidade. Deseja continuar?
         </p>
@@ -1141,7 +1149,7 @@ export default function ProcessoDetalhePage() {
               onChange={(evento) => setDescricao(evento.target.value)}
             />
           </Campo>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-tinta-500">
             A alteração é registrada na auditoria. Processos encerrados não
             podem ser editados.
           </p>

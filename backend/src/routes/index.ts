@@ -5,7 +5,6 @@ import { protegerCsrf } from '../middlewares/csrf.middleware.js';
 import { auditoriaRouter } from './auditoria.routes.js';
 import { authRouter } from './auth.routes.js';
 import { cargoRouter } from './cargo.routes.js';
-import { delegacaoRouter } from './delegacao.routes.js';
 import { fluxoRouter } from './fluxo.routes.js';
 import { healthRouter } from './health.routes.js';
 import { processoRouter } from './processo.routes.js';
@@ -36,6 +35,5 @@ apiRouter.use('/fluxos', autenticar, exigirSenhaAlterada, protegerCsrf, fluxoRou
 apiRouter.use('/processos', autenticar, exigirSenhaAlterada, protegerCsrf, processoRouter);
 apiRouter.use('/tarefas', autenticar, exigirSenhaAlterada, protegerCsrf, tarefaRouter);
 apiRouter.use('/visoes', autenticar, exigirSenhaAlterada, protegerCsrf, visaoRouter);
-apiRouter.use('/delegacoes', autenticar, exigirSenhaAlterada, protegerCsrf, delegacaoRouter);
 apiRouter.use('/auditoria', autenticar, exigirSenhaAlterada, protegerCsrf, auditoriaRouter);
 apiRouter.use('/relatorios', autenticar, exigirSenhaAlterada, protegerCsrf, relatorioRouter);

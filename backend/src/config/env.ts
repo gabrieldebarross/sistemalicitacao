@@ -41,7 +41,7 @@ const envSchema = z.object({
   LOGIN_LOCK_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
 
   MFA_ENCRYPTION_KEY: z.string().optional(),
-  MFA_ISSUER: z.string().min(1).max(100).default('Sistema de Licitações'),
+  MFA_ISSUER: z.string().min(1).max(100).default('TramitaY'),
 });
 
 // Valores vazios são tratados como "não definidos" para que os defaults atuem.

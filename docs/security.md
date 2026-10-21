@@ -29,8 +29,9 @@
   único, armazenados como hash. O segredo TOTP é criptografado com AES-256-GCM
   usando `MFA_ENCRYPTION_KEY` (32 bytes em hex, base64 ou texto). O desafio de
   MFA é uma sessão pendente de 10 minutos, sem access token, limitada a 5
-  tentativas. Reset administrativo exige outro administrador, revoga sessões e
-  é auditado.
+  tentativas. O contador é incrementado de forma atômica; ao atingir o limite, o
+  desafio é revogado, os cookies são limpos e o cliente retorna ao login. Reset
+  administrativo exige outro administrador, revoga sessões e é auditado.
 - **Senhas:** mínimo de 12 caracteres, máximo de 128, histórico das últimas 5
   senhas, troca obrigatória de senha provisória e redefinição administrativa com
   revogação de sessões.
@@ -50,8 +51,7 @@
   tokens, hashes de senha e códigos de recuperação não são registrados.
 - **Auditoria:** registra usuário, ação, recurso, resultado, justificativa e
   correlação. Cobre login/MFA, sessões, alterações de senha, desativação,
-  transferências, bloqueio/desbloqueio de login, reset de MFA, delegações e
-  visões salvas. Diffs usam allowlist de campos, mascaram senhas/tokens/segredos
+  transferências, bloqueio/desbloqueio de login, reset de MFA e visões salvas. Diffs usam allowlist de campos, mascaram senhas/tokens/segredos
   e truncam textos longos. A auditoria não é editável pela interface comum.
 - **Dependências:** verificação de vulnerabilidades no CI.
 - **Segredos:** `.env` fora do Git; `.env.example` só com placeholders.

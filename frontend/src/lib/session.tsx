@@ -9,7 +9,7 @@ import {
   useState,
 } from 'react';
 
-import { api } from './api';
+import { api, EVENTO_SESSAO_EXPIRADA } from './api';
 
 export interface Perfil {
   id: number;
@@ -60,6 +60,16 @@ export function SessaoProvider({
   useEffect(() => {
     void recarregar();
   }, [recarregar]);
+
+  useEffect(() => {
+    function aoExpirarSessao() {
+      setPerfil(null);
+      setCarregando(false);
+    }
+    window.addEventListener(EVENTO_SESSAO_EXPIRADA, aoExpirarSessao);
+    return () =>
+      window.removeEventListener(EVENTO_SESSAO_EXPIRADA, aoExpirarSessao);
+  }, []);
 
   const entrar = useCallback(
     async (email: string, senha: string): Promise<ResultadoEntrada> => {

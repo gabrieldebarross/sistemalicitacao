@@ -120,14 +120,14 @@ export default function SegurancaPage() {
       <div className="grid gap-6 lg:grid-cols-[1fr_1.5fr]">
         <Cartao>
           <div className="flex items-start gap-3 px-4 py-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sky-50 text-sky-800">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rota-50 text-rota-800">
               <ShieldCheck className="h-5 w-5" aria-hidden="true" />
             </span>
             <div>
-              <h2 className="font-semibold text-slate-900">
+              <h2 className="font-semibold text-tinta-950">
                 Verificação em duas etapas
               </h2>
-              <p className="mt-1 text-sm text-slate-600">
+              <p className="mt-1 text-sm text-tinta-600">
                 {perfil?.mfaAtivo
                   ? 'O MFA está ativo nesta conta. O acesso exige um código do aplicativo autenticador ou um código de recuperação.'
                   : 'O MFA ainda não está configurado. Contas administrativas precisam configurá-lo no próximo acesso.'}
@@ -141,21 +141,21 @@ export default function SegurancaPage() {
               </div>
             </div>
           </div>
-          <div className="border-t border-slate-100 px-4 py-3 text-sm text-slate-600">
+          <div className="border-t border-papel-100 px-4 py-3 text-sm text-tinta-600">
             <p className="flex items-center gap-2">
               <KeyRound className="h-4 w-4" aria-hidden="true" />
               Guarde seus códigos de recuperação em local seguro.
             </p>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-tinta-500">
               Se você perder o acesso ao autenticador, utilize um código de
               recuperação. Se os códigos também forem perdidos, solicite a
               redefinição de MFA a outro administrador.
             </p>
           </div>
-          <div className="border-t border-slate-100 px-4 py-3">
+          <div className="border-t border-papel-100 px-4 py-3">
             <Link
               href="/perfil"
-              className="text-sm font-medium text-sky-800 hover:underline"
+              className="text-sm font-medium text-rota-800 hover:underline"
             >
               Alterar senha
             </Link>
@@ -163,10 +163,10 @@ export default function SegurancaPage() {
         </Cartao>
 
         <Cartao>
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-linha-200 px-4 py-3">
             <div>
-              <h2 className="font-semibold text-slate-900">Sessões ativas</h2>
-              <p className="text-xs text-slate-500">
+              <h2 className="font-semibold text-tinta-950">Sessões ativas</h2>
+              <p className="text-xs text-tinta-500">
                 Dispositivos que possuem acesso válido à sua conta.
               </p>
             </div>
@@ -189,21 +189,21 @@ export default function SegurancaPage() {
               descricao="Não há sessões ativas para esta conta."
             />
           ) : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-papel-100">
               {sessoes.map((sessao) => (
                 <li
                   key={sessao.id}
                   className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div>
-                    <p className="flex items-center gap-2 text-sm font-medium text-slate-800">
+                    <p className="flex items-center gap-2 text-sm font-medium text-tinta-800">
                       <Monitor className="h-4 w-4" aria-hidden="true" />
                       {descreverDispositivo(sessao.userAgent)}
                       {sessao.atual ? (
                         <Etiqueta tom="info">Sessão atual</Etiqueta>
                       ) : null}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-tinta-500">
                       IP {sessao.ip ?? 'não identificado'} · Início{' '}
                       {formatarDataHora(sessao.criadaEm)} · Último uso{' '}
                       {formatarDataHora(sessao.ultimoUsoEm)} · Expira{' '}

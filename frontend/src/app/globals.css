@@ -1,5 +1,55 @@
 @import "tailwindcss";
 
+@theme {
+  --font-sans:
+    "Segoe UI", "Public Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+
+  /* Papel e tinta: base quente, institucional e de baixa fadiga. */
+  --color-papel-50: #fbf9f5;
+  --color-papel-100: #f4f0e8;
+  --color-papel-200: #ebe4d8;
+
+  --color-linha-100: #e8e1d5;
+  --color-linha-200: #d8cfbf;
+  --color-linha-300: #9b8f7c;
+
+  --color-tinta-300: #8fa1a4;
+  --color-tinta-400: #6c8185;
+  --color-tinta-500: #566c72;
+  --color-tinta-600: #465e65;
+  --color-tinta-700: #3a525b;
+  --color-tinta-800: #29424c;
+  --color-tinta-900: #18343f;
+  --color-tinta-950: #0c2631;
+
+  /* Rota: verde-petróleo para ações, navegação e estados de progresso. */
+  --color-rota-50: #eaf5f2;
+  --color-rota-100: #d3ebe5;
+  --color-rota-200: #a8d8ce;
+  --color-rota-300: #77bdb0;
+  --color-rota-400: #47a092;
+  --color-rota-500: #2c8377;
+  --color-rota-600: #226c63;
+  --color-rota-700: #1d5851;
+  --color-rota-800: #1a4742;
+  --color-rota-900: #173b37;
+  --color-rota-950: #0b2422;
+
+  /* Sinal: laranja queimado para atenção, prazos e a marca. */
+  --color-sinal-50: #fff7ed;
+  --color-sinal-100: #ffedd5;
+  --color-sinal-200: #fed7aa;
+  --color-sinal-300: #fdba74;
+  --color-sinal-400: #f59e4b;
+  --color-sinal-500: #dc7a22;
+  --color-sinal-600: #b45309;
+  --color-sinal-700: #92400e;
+  --color-sinal-800: #78350f;
+  --color-sinal-900: #451a03;
+}
+
 :root {
   color-scheme: light;
 }
@@ -10,15 +60,74 @@ body {
 }
 
 body {
-  background-color: var(--color-slate-50);
-  color: var(--color-slate-800);
+  background-color: var(--color-papel-50);
+  color: var(--color-tinta-900);
+  font-family: var(--font-sans);
+  font-feature-settings: "kern", "liga", "tnum";
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-rota-200);
+  color: var(--color-tinta-950);
 }
 
 /* Foco sempre visível para navegação por teclado. */
 :focus-visible {
-  outline: 2px solid var(--color-sky-600);
+  outline: 2px solid var(--color-rota-600);
   outline-offset: 2px;
+}
+
+/* Malha sutil usada no login e em superfícies institucionais. */
+.fundo-malha {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.055) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.fundo-malha-clara {
+  background-image:
+    linear-gradient(to right, rgb(12 38 49 / 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(12 38 49 / 0.045) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* Números de processo, prazos e quantidades sempre alinhados. */
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tabelas de dados: mesma leitura em todas as telas administrativas. */
+main table {
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+main thead {
+  background-color: var(--color-papel-50);
+}
+
+main thead th {
+  color: var(--color-tinta-600);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+main tbody tr {
+  transition: background-color 120ms ease;
+}
+
+main tbody tr:hover {
+  background-color: var(--color-papel-50);
+}
+
+main input[type="date"] {
+  min-width: 10.5rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -26,6 +135,8 @@ body {
   *::before,
   *::after {
     animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

@@ -47,7 +47,7 @@ informar a limitação.
 - Adicionar testes de integração de sessões/refresh concorrente, MFA e
   desativação transacional contra banco de teste isolado.
 - Adicionar testes de API negativos para todas as rotas novas.
-- Introduzir testes de componentes e E2E (login, MFA, tarefas, delegações,
+- Introduzir testes de componentes e E2E (login, MFA, tarefas,
   visões salvas, desativação com transferência).
 - Definir banco de teste e estratégia de fixtures.
 - Definir meta de cobertura para módulos críticos (domínio/authz).

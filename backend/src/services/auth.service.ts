@@ -1,5 +1,10 @@
 import { env } from '../config/env.js';
-import { AuthenticationError, ConflictError } from '../errors/app-error.js';
+import {
+  AuthenticationError,
+  ConflictError,
+  MfaChallengeError,
+  ValidationError,
+} from '../errors/app-error.js';
 import { normalizarEmail, normalizarNome } from '../domain/normalization.js';
 import type { Sessao } from '../models/sessao.js';
 import * as sessaoRepo from '../repositories/sessao.repository.js';
@@ -283,11 +288,13 @@ async function carregarDesafio(
     sessao.revogadaEm !== null ||
     sessao.expiraEm <= new Date()
   ) {
-    throw new AuthenticationError('Desafio de MFA expirado. Faça login novamente.');
+    throw new MfaChallengeError(
+      'Desafio de MFA expirado. Faça login novamente.',
+    );
   }
   const usuario = await usuarioRepo.buscarParaAutenticacao(usuarioId);
   if (!usuario || !usuario.usuario.ativo) {
-    throw new AuthenticationError('Credenciais inválidas.');
+    throw new MfaChallengeError('Sessão de MFA inválida. Faça login novamente.');
   }
   return { sessao, usuario };
 }
@@ -322,7 +329,7 @@ export async function confirmarConfiguracaoMfa(
       resultado: 'FALHA',
       metadados: { motivo: 'LIMITE_TENTATIVAS' },
     });
-    throw new AuthenticationError(
+    throw new MfaChallengeError(
       'Muitas tentativas de configuração. Faça login novamente.',
     );
   }
@@ -330,11 +337,11 @@ export async function confirmarConfiguracaoMfa(
   try {
     resultado = await mfaService.confirmarConfiguracao(usuario.usuario, codigo);
   } catch (erro) {
-    sessao.mfaTentativas += 1;
-    await sessao.save();
-    if (sessao.mfaTentativas >= MFA_MAX_TENTATIVAS) {
-      await sessaoService.revogarSessao(sessao.id);
+    if (!(erro instanceof ValidationError)) {
+      throw erro;
     }
+    const tentativas = await sessaoRepo.incrementarTentativasMfa(sessao.id);
+    sessao.mfaTentativas = tentativas;
     await auditoria.registrar(contexto, {
       acao: 'MFA_CONFIGURAR',
       recurso: 'usuario',
@@ -342,6 +349,12 @@ export async function confirmarConfiguracaoMfa(
       resultado: 'FALHA',
       metadados: { motivo: 'CODIGO_INVALIDO' },
     });
+    if (tentativas >= MFA_MAX_TENTATIVAS) {
+      await sessaoService.revogarSessao(sessao.id);
+      throw new MfaChallengeError(
+        'Muitas tentativas de configuração. Faça login novamente.',
+      );
+    }
     throw erro;
   }
   const tokens = await sessaoService.ativarSessaoMfa(
@@ -379,23 +392,27 @@ export async function verificarDesafioMfa(
       resultado: 'FALHA',
       metadados: { motivo: 'LIMITE_TENTATIVAS' },
     });
-    throw new AuthenticationError(
+    throw new MfaChallengeError(
       'Muitas tentativas de verificação. Faça login novamente.',
     );
   }
   const tipo = await mfaService.verificarCodigo(usuario.usuario, codigo);
   if (!tipo) {
-    sessao.mfaTentativas += 1;
-    await sessao.save();
-    if (sessao.mfaTentativas >= MFA_MAX_TENTATIVAS) {
-      await sessaoService.revogarSessao(sessao.id);
-    }
+    const tentativas = await sessaoRepo.incrementarTentativasMfa(sessao.id);
+    sessao.mfaTentativas = tentativas;
     await auditoria.registrar(contexto, {
       acao: 'LOGIN_MFA',
       recurso: 'sessao',
       recursoId: usuarioId,
       resultado: 'FALHA',
+      metadados: { motivo: 'CODIGO_INVALIDO' },
     });
+    if (tentativas >= MFA_MAX_TENTATIVAS) {
+      await sessaoService.revogarSessao(sessao.id);
+      throw new MfaChallengeError(
+        'Muitas tentativas de verificação. Faça login novamente.',
+      );
+    }
     throw new AuthenticationError('Código de verificação inválido.');
   }
   const tokens = await sessaoService.ativarSessaoMfa(
