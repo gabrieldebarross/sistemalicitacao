@@ -3,6 +3,7 @@ export interface AutenticacaoRequisicao {
   nome: string;
   email: string;
   senhaProvisoria: boolean;
+  sessaoId: string;
   permissoes: ReadonlySet<string>;
   roles: string[];
 }

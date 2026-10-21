@@ -12,7 +12,14 @@ export interface ProcessoResumo {
   tipoProcesso: Referencia | null;
   setorAtual: Referencia | null;
   responsavelAtual: Referencia | null;
-  etapaAtual: { id: number; nome: string; status: string } | null;
+  etapaAtual: {
+    id: number;
+    nome: string;
+    status: string;
+    dataPrevista: string | null;
+    responsavel: Referencia | null;
+    setor: Referencia | null;
+  } | null;
   criadoEm: string;
   iniciadoEm: string | null;
   finalizadoEm: string | null;
@@ -192,4 +199,74 @@ export interface ItemAuditoria {
   ip: string | null;
   metadados: Record<string, unknown> | null;
   criadoEm: string;
+}
+
+export interface Tarefa {
+  id: number;
+  processo: {
+    id: number;
+    numero: string;
+    nome: string;
+    status: string;
+    responsavel: Referencia | null;
+    setor: Referencia | null;
+  };
+  etapa: {
+    id: number;
+    nome: string;
+    status: string;
+    obrigatoria: boolean;
+    dataPrevista: string | null;
+  };
+  responsavel: Referencia | null;
+  setor: Referencia | null;
+  delegacao: { id: number; origem: Referencia | null } | null;
+  atrasada: boolean;
+  diasAtraso: number | null;
+  proximaAcao: 'INICIAR' | 'CONCLUIR' | 'DESBLOQUEAR';
+}
+
+export interface ResumoTarefas {
+  total: number;
+  atrasadas: number;
+  hoje: number;
+  semPrazo: number;
+  porStatus: Record<string, number>;
+}
+
+export interface VisaoSalva {
+  id: number;
+  nome: string;
+  filtros: Record<string, unknown>;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+export interface Delegacao {
+  id: number;
+  origem: Referencia | null;
+  destino: Referencia | null;
+  processo: { id: number; numero: string; nome: string } | null;
+  inicioEm: string;
+  fimEm: string;
+  motivo: string;
+  canceladoEm: string | null;
+  ativa: boolean;
+  criadoEm: string;
+}
+
+export interface SessaoUsuario {
+  id: string;
+  criadaEm: string;
+  ultimoUsoEm: string | null;
+  expiraEm: string;
+  ip: string | null;
+  userAgent: string | null;
+  atual: boolean;
+}
+
+export interface ConfiguracaoMfa {
+  segredo: string;
+  otpauthUrl: string;
+  qrCodeDataUrl: string;
 }

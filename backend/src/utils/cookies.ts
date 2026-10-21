@@ -3,18 +3,22 @@ import { randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Request, Response } from 'express';
 
 import { env } from '../config/env.js';
+import { duracaoParaMs } from './duration.js';
 
 export const AUTH_COOKIE = 'sl_token';
+export const REFRESH_COOKIE = 'sl_refresh';
+export const MFA_COOKIE = 'sl_mfa';
 export const CSRF_COOKIE = 'sl_csrf';
 export const CSRF_HEADER = 'x-csrf-token';
 
-const AUTH_MAX_AGE_MS = 1000 * 60 * 60 * 8; // 8 horas
-const CSRF_MAX_AGE_MS = AUTH_MAX_AGE_MS;
+const ACCESS_MAX_AGE_MS = duracaoParaMs(env.jwt.accessExpiresIn);
+const REFRESH_MAX_AGE_MS = duracaoParaMs(env.jwt.refreshExpiresIn);
+const CSRF_MAX_AGE_MS = REFRESH_MAX_AGE_MS;
+const MFA_MAX_AGE_MS = 10 * 60 * 1000;
 
 const baseCookie = {
   sameSite: 'lax' as const,
   secure: env.isProduction,
-  path: '/',
 };
 
 function parseCookies(header: string | undefined): Record<string, string> {
@@ -40,24 +44,63 @@ export function getCookie(req: Request, nome: string): string | undefined {
   return parseCookies(req.headers.cookie)[nome];
 }
 
-export function definirCookiesSessao(res: Response, token: string): string {
+export function definirCookiesSessao(
+  res: Response,
+  accessToken: string,
+  refreshToken: string,
+): string {
   const csrfToken = randomBytes(24).toString('hex');
-  res.cookie(AUTH_COOKIE, token, {
+  res.cookie(AUTH_COOKIE, accessToken, {
     ...baseCookie,
+    path: '/',
     httpOnly: true,
-    maxAge: AUTH_MAX_AGE_MS,
+    maxAge: ACCESS_MAX_AGE_MS,
+  });
+  res.cookie(REFRESH_COOKIE, refreshToken, {
+    ...baseCookie,
+    path: '/api/auth',
+    httpOnly: true,
+    maxAge: REFRESH_MAX_AGE_MS,
   });
   res.cookie(CSRF_COOKIE, csrfToken, {
     ...baseCookie,
+    path: '/',
     httpOnly: false,
     maxAge: CSRF_MAX_AGE_MS,
   });
   return csrfToken;
 }
 
+export function definirCookieDesafioMfa(res: Response, token: string): void {
+  res.cookie(MFA_COOKIE, token, {
+    ...baseCookie,
+    path: '/api/auth',
+    httpOnly: true,
+    maxAge: MFA_MAX_AGE_MS,
+  });
+}
+
+export function limparCookieDesafioMfa(res: Response): void {
+  res.clearCookie(MFA_COOKIE, {
+    ...baseCookie,
+    path: '/api/auth',
+    httpOnly: true,
+  });
+}
+
 export function limparCookiesSessao(res: Response): void {
-  res.clearCookie(AUTH_COOKIE, { ...baseCookie, httpOnly: true });
-  res.clearCookie(CSRF_COOKIE, { ...baseCookie, httpOnly: false });
+  res.clearCookie(AUTH_COOKIE, { ...baseCookie, path: '/', httpOnly: true });
+  res.clearCookie(REFRESH_COOKIE, {
+    ...baseCookie,
+    path: '/api/auth',
+    httpOnly: true,
+  });
+  res.clearCookie(CSRF_COOKIE, { ...baseCookie, path: '/', httpOnly: false });
+  res.clearCookie(MFA_COOKIE, {
+    ...baseCookie,
+    path: '/api/auth',
+    httpOnly: true,
+  });
 }
 
 /**

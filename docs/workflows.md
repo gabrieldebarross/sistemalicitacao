@@ -94,19 +94,44 @@ podem ser puladas.
   etapas intermediárias permanecem `CONCLUIDA`. Ao concluir novamente o destino,
   o processo retorna **diretamente** à origem, sem refazer as intermediárias.
   A interface permite escolher qualquer etapa anterior já concluída.
-- **Conclusão do processo**: todas as etapas obrigatórias devem estar
-  `CONCLUIDA` ou `PULADA`. Etapas opcionais ainda pendentes são puladas
-  automaticamente na conclusão, com motivo registrado e evento `PULO_ETAPA`.
-  Havendo obrigatória não finalizada, a conclusão é rejeitada e a resposta lista
-  as etapas impeditivas.
+- **Conclusão do processo**: somente etapas **obrigatórias** bloqueiam a
+  conclusão; elas devem estar `CONCLUIDA` ou `PULADA`. Etapas opcionais ainda
+  pendentes **permanecem `PENDENTE`** no histórico e não são alteradas
+  automaticamente. Havendo obrigatória não finalizada, a conclusão é rejeitada e
+  a resposta lista as etapas impeditivas.
+
+## Minhas tarefas, delegações e visões salvas
+
+- **Minhas tarefas** (`GET /api/tarefas`) reúne etapas ativas atribuídas ao
+  usuário e, no período vigente, etapas delegadas a ele. Somente a etapa atual
+  do processo aparece como `PENDENTE`; etapas futuras não são exibidas antes de
+  serem ativadas. Processos encerrados são omitidos.
+- **Delegação temporária** (`/api/delegacoes`) permite compartilhar as tarefas
+  do usuário de origem com outro usuário ativo por um período e, opcionalmente,
+  para um processo específico. A delegação não altera o responsável original da
+  etapa, pode ser cancelada e exige motivo, com auditoria. Não é permitida
+  sobreposição para o mesmo destino.
+- **Visões salvas** (`/api/visoes`) armazenam filtros da listagem de processos de
+  forma privada por usuário. O nome é único por usuário; os filtros são validados
+  com Zod e não aceitam SQL ou campos desconhecidos.
 
 ## Responsáveis e setores
 
 O administrador mantém o vínculo entre usuários e setores na tela de usuários
-(`PUT /api/usuarios/:id/setores`), indicando no máximo um setor principal. Ao
-atribuir um usuário a uma etapa, a interface sugere o setor principal do
-usuário; o setor pode ser ajustado explicitamente. O backend valida que o setor
-existe e está ativo antes de persistir o vínculo na etapa.
+(`PUT /api/usuarios/:id/setores`), indicando no máximo um setor principal.
+
+- O **responsável e o setor do processo** são independentes. Alterar o
+  responsável do processo não altera automaticamente o setor do processo.
+- O **setor da etapa** é automático: ao atribuir um novo responsável à etapa, o
+  setor da etapa passa a ser o **setor principal do novo responsável**. Ao
+  devolver a etapa ao usuário anterior, ela volta ao setor principal dele. Não há
+  seleção manual de setor da etapa na interface.
+- O resumo do processo exibe o responsável e o setor do processo, além do
+  responsável, setor e prazo da etapa atual.
+- Na desativação de usuário, as atribuições de processo e etapa são transferidas
+  para um usuário ativo de destino. As etapas transferidas assumem o setor
+  principal do destino; a operação é transacional, revoga sessões, cancela
+  delegações e registra movimentações e auditoria.
 
 ## Movimentações
 

@@ -7,6 +7,7 @@ import {
   AuthorizationError,
   PasswordChangeRequiredError,
 } from '../errors/app-error.js';
+import * as sessaoRepo from '../repositories/sessao.repository.js';
 import * as usuarioRepo from '../repositories/usuario.repository.js';
 import { AUTH_COOKIE, getCookie } from '../utils/cookies.js';
 import { verificarAccessToken } from '../utils/jwt.js';
@@ -40,6 +41,11 @@ export async function autenticar(
       next(new AuthenticationError('Sessão expirada ou inválida.'));
       return;
     }
+    const sessao = await sessaoRepo.buscarAtivaPorId(payload.sid, new Date());
+    if (!sessao || sessao.usuarioId !== payload.sub) {
+      next(new AuthenticationError('Sessão expirada ou revogada.'));
+      return;
+    }
     const dados = await usuarioRepo.buscarParaAutenticacao(payload.sub);
     if (!dados || !dados.usuario.ativo) {
       next(new AuthenticationError('Sessão inválida.'));
@@ -50,6 +56,7 @@ export async function autenticar(
       nome: dados.usuario.nome,
       email: dados.usuario.email,
       senhaProvisoria: dados.usuario.senhaProvisoria,
+      sessaoId: sessao.id,
       permissoes: dados.permissoes,
       roles: dados.roles,
     };

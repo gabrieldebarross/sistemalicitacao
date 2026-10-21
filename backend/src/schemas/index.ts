@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { env } from '../config/env.js';
 import { paginacaoSchema } from '../utils/pagination.js';
 
 export { paginacaoSchema };
@@ -7,6 +8,21 @@ export { paginacaoSchema };
 export const idParamSchema = z.object({
   id: z.coerce.number().int().positive(),
 });
+
+export const sessaoIdParamSchema = z.object({
+  id: z.string().uuid('Sessão inválida.'),
+});
+
+export const usuarioSessaoParamSchema = z.object({
+  id: z.coerce.number().int().positive(),
+  sessaoId: z.string().uuid('Sessão inválida.'),
+});
+
+const booleanoQuery = z.preprocess(
+  (valor) =>
+    valor === 'true' ? true : valor === 'false' ? false : valor,
+  z.boolean().optional(),
+);
 
 export const processoEtapaParamSchema = z.object({
   id: z.coerce.number().int().positive(),
@@ -28,8 +44,15 @@ export const alterarSenhaSchema = z.object({
   senhaAtual: z.string().min(1, 'Senha atual obrigatória.'),
   novaSenha: z
     .string()
-    .min(8, 'A nova senha deve ter ao menos 8 caracteres.')
+    .min(
+      env.password.minLength,
+      `A nova senha deve ter ao menos ${env.password.minLength} caracteres.`,
+    )
     .max(128),
+});
+
+export const mfaCodigoSchema = z.object({
+  codigo: z.string().trim().min(6, 'Informe o código.').max(32),
 });
 
 export const atualizarPerfilSchema = z
@@ -95,7 +118,13 @@ export const listarUsuarioQuerySchema = paginacaoSchema.extend({
 export const criarUsuarioSchema = z.object({
   nome: textoObrigatorio(150),
   email: z.string().trim().email('E-mail inválido.').max(180),
-  senha: z.string().min(8, 'A senha deve ter ao menos 8 caracteres.').max(128),
+  senha: z
+    .string()
+    .min(
+      env.password.minLength,
+      `A senha deve ter ao menos ${env.password.minLength} caracteres.`,
+    )
+    .max(128),
   cargoId: z.coerce.number().int().positive().nullable().optional(),
   roleIds: z.array(z.coerce.number().int().positive()).optional(),
   ativo: z.boolean().optional(),
@@ -105,11 +134,17 @@ export const atualizarUsuarioSchema = z.object({
   email: z.string().trim().email('E-mail inválido.').max(180).optional(),
   senha: z
     .string()
-    .min(8, 'A senha deve ter ao menos 8 caracteres.')
+    .min(
+      env.password.minLength,
+      `A senha deve ter ao menos ${env.password.minLength} caracteres.`,
+    )
     .max(128)
     .optional(),
   cargoId: z.coerce.number().int().positive().nullable().optional(),
   ativo: z.boolean().optional(),
+});
+export const desativarUsuarioSchema = z.object({
+  destinoUsuarioId: z.coerce.number().int().positive().optional(),
 });
 export const definirRolesSchema = z.object({
   roleIds: z.array(z.coerce.number().int().positive()),
@@ -207,7 +242,59 @@ export const listarProcessoQuerySchema = paginacaoSchema.extend({
   tipoProcessoId: z.coerce.number().int().positive().optional(),
   setorAtualId: z.coerce.number().int().positive().optional(),
   responsavelAtualId: z.coerce.number().int().positive().optional(),
+  etapaAtualId: z.coerce.number().int().positive().optional(),
+  atrasado: booleanoQuery,
+  criadoDe: z.coerce.date().optional(),
+  criadoAte: z.coerce.date().optional(),
   busca: textoOpcional(500),
+  ordenarPor: z
+    .enum(['numero', 'nome', 'created_at', 'data_prevista', 'status'])
+    .optional(),
+  direcao: z.enum(['asc', 'desc']).optional(),
+});
+
+export const filtrosVisaoSchema = listarProcessoQuerySchema
+  .omit({ pagina: true, tamanhoPagina: true })
+  .partial()
+  .strict();
+
+export const salvarVisaoSchema = z.object({
+  nome: textoObrigatorio(80),
+  filtros: filtrosVisaoSchema,
+});
+
+export const atualizarVisaoSchema = z.object({
+  nome: textoObrigatorio(80).optional(),
+  filtros: filtrosVisaoSchema.optional(),
+});
+
+export const criarDelegacaoSchema = z
+  .object({
+    destinoUsuarioId: z.coerce.number().int().positive(),
+    processoId: z.coerce.number().int().positive().nullable().optional(),
+    inicioEm: z.coerce.date(),
+    fimEm: z.coerce.date(),
+    motivo: z.string().trim().min(5, 'Informe o motivo.').max(500),
+  })
+  .superRefine((dados, contexto) => {
+    if (dados.fimEm <= dados.inicioEm) {
+      contexto.addIssue({
+        code: 'custom',
+        path: ['fimEm'],
+        message: 'O fim da delegação deve ser posterior ao início.',
+      });
+    }
+  });
+
+export const listarDelegacaoQuerySchema = paginacaoSchema.extend({
+  incluirHistorico: booleanoQuery,
+});
+
+export const listarTarefaQuerySchema = paginacaoSchema.extend({
+  atrasado: booleanoQuery,
+  status: z
+    .enum(['PENDENTE', 'EM_ANDAMENTO', 'BLOQUEADA'])
+    .optional(),
 });
 export const selecaoEtapaCondicionalSchema = z
   .object({

@@ -165,6 +165,7 @@ export interface VinculoSetorUsuario {
 /** Carrega os vínculos usuário-setor de vários usuários em uma única consulta. */
 export async function listarVinculosSetores(
   usuarioIds: readonly number[],
+  transaction?: Transaction,
 ): Promise<VinculoSetorUsuario[]> {
   if (usuarioIds.length === 0) {
     return [];
@@ -172,6 +173,7 @@ export async function listarVinculosSetores(
   const vinculos = await UserSectorAssignment.findAll({
     where: { usuarioId: { [Op.in]: [...usuarioIds] } },
     include: [{ model: Setor, as: 'setor' }],
+    transaction,
   });
   return vinculos
     .filter(

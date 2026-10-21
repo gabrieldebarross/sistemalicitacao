@@ -45,7 +45,14 @@ export interface ProcessoResumoDTO {
   tipoProcesso: { id: number; nome: string } | null;
   setorAtual: { id: number; nome: string } | null;
   responsavelAtual: { id: number; nome: string } | null;
-  etapaAtual: { id: number; nome: string; status: ProcessoEtapaStatus } | null;
+  etapaAtual: {
+    id: number;
+    nome: string;
+    status: ProcessoEtapaStatus;
+    dataPrevista: Date | null;
+    responsavel: { id: number; nome: string } | null;
+    setor: { id: number; nome: string } | null;
+  } | null;
   criadoEm: Date;
   iniciadoEm: Date | null;
   finalizadoEm: Date | null;
@@ -133,7 +140,18 @@ function toResumo(processo: Processo): ProcessoResumoDTO {
         }
       : null,
     etapaAtual: atual
-      ? { id: atual.id, nome: atual.nome, status: atual.status }
+      ? {
+          id: atual.id,
+          nome: atual.nome,
+          status: atual.status,
+          dataPrevista: atual.dataPrevista,
+          responsavel: atual.responsavel
+            ? { id: atual.responsavel.id, nome: atual.responsavel.nome }
+            : null,
+          setor: atual.setor
+            ? { id: atual.setor.id, nome: atual.setor.nome }
+            : null,
+        }
       : null,
     criadoEm: processo.createdAt,
     iniciadoEm: processo.iniciadoEm,
@@ -332,7 +350,13 @@ export async function listar(input: {
   tipoProcessoId?: number;
   setorAtualId?: number;
   responsavelAtualId?: number;
+  etapaAtualId?: number;
+  atrasado?: boolean;
+  criadoDe?: Date;
+  criadoAte?: Date;
   busca?: string;
+  ordenarPor?: 'numero' | 'nome' | 'created_at' | 'data_prevista' | 'status';
+  direcao?: 'asc' | 'desc';
   pagina: number;
   tamanhoPagina: number;
 }): Promise<ResultadoPaginado<ProcessoResumoDTO>> {
@@ -350,8 +374,26 @@ export async function listar(input: {
   if (input.responsavelAtualId !== undefined) {
     filtro.responsavelAtualId = input.responsavelAtualId;
   }
+  if (input.etapaAtualId !== undefined) {
+    filtro.etapaAtualId = input.etapaAtualId;
+  }
+  if (input.atrasado !== undefined) {
+    filtro.atrasado = input.atrasado;
+  }
+  if (input.criadoDe) {
+    filtro.criadoDe = input.criadoDe;
+  }
+  if (input.criadoAte) {
+    filtro.criadoAte = input.criadoAte;
+  }
   if (input.busca) {
     filtro.busca = input.busca;
+  }
+  if (input.ordenarPor) {
+    filtro.ordenarPor = input.ordenarPor;
+  }
+  if (input.direcao) {
+    filtro.direcao = input.direcao;
   }
   const { itens, total } = await processoRepo.listar(filtro, offset, limit);
   return montarPaginado(itens.map(toResumo), total, pagina, tamanhoPagina);
@@ -1077,9 +1119,27 @@ export async function atribuir(
     setorAtualId: processo.setorAtualId,
   };
   if (input.responsavelAtualId !== undefined) {
+    if (input.responsavelAtualId !== null) {
+      const responsavel = await usuarioRepo.buscarPorId(
+        input.responsavelAtualId,
+      );
+      if (!responsavel || !responsavel.ativo) {
+        throw new ValidationError(
+          'O responsável do processo não existe ou está inativo.',
+        );
+      }
+    }
     processo.responsavelAtualId = input.responsavelAtualId;
   }
   if (input.setorAtualId !== undefined) {
+    if (input.setorAtualId !== null) {
+      const setor = await setorRepo.buscarPorId(input.setorAtualId);
+      if (!setor || !setor.ativo) {
+        throw new ValidationError(
+          'O setor do processo não existe ou está inativo.',
+        );
+      }
+    }
     processo.setorAtualId = input.setorAtualId;
   }
   await processo.save();
@@ -1157,7 +1217,7 @@ export async function atribuirEtapa(
 
   let responsavelNome: string | null = null;
   let setorNome: string | null = null;
-  let setorId: number | null = etapa.setorId;
+  let setorId: number | null;
 
   if (input.responsavelId !== null) {
     const responsavel = await usuarioRepo.buscarPorId(input.responsavelId);
@@ -1168,21 +1228,22 @@ export async function atribuirEtapa(
     }
     responsavelNome = responsavel.nome;
 
-    // Sem setor explícito, usa o setor principal do responsável. Isso mantém a
-    // etapa coerente com o vínculo administrativo usuário-setor.
-    if (input.setorId === undefined) {
-      const vinculos = await usuarioRepo.listarVinculosSetores([
-        input.responsavelId,
-      ]);
-      setorId =
-        vinculos.find((vinculo) => vinculo.principal)?.setorId ??
-        vinculos[0]?.setorId ??
-        etapa.setorId;
-    }
-  }
-
-  if (input.setorId !== undefined) {
+    // O setor da etapa acompanha o setor principal do responsável. Assim, ao
+    // transferir para outro usuário, o setor exibido passa a ser o do novo
+    // responsável; ao devolver ao usuário anterior, volta ao setor dele.
+    const vinculos = await usuarioRepo.listarVinculosSetores([
+      input.responsavelId,
+    ]);
+    setorId =
+      vinculos.find((vinculo) => vinculo.principal)?.setorId ??
+      vinculos[0]?.setorId ??
+      null;
+  } else if (input.setorId !== undefined) {
+    // Sem responsável, o setor pode ser ajustado explicitamente.
     setorId = input.setorId;
+  } else {
+    // O setor da etapa é derivado do responsável; sem responsável, não há setor.
+    setorId = null;
   }
   if (setorId !== null) {
     const setor = await setorRepo.buscarPorId(setorId);
@@ -1740,7 +1801,7 @@ export async function encerrar(
 
     const etapasPuladas: ProcessoEtapa[] = [];
     if (status === PROCESSO_STATUS.CONCLUIDO) {
-      const { obrigatorias, opcionais } = classificarPendenciasConclusao(
+      const { obrigatorias } = classificarPendenciasConclusao(
         processo.etapas ?? [],
       );
       if (obrigatorias.length > 0) {
@@ -1757,31 +1818,8 @@ export async function encerrar(
           },
         );
       }
-      for (const etapa of opcionais) {
-        etapa.status = PROCESSO_ETAPA_STATUS.PULADA;
-        etapa.motivoPulo =
-          'Etapa opcional pendente pulada automaticamente na conclusão do processo.';
-        etapa.puladaEm = agora;
-        etapa.motivoBloqueio = null;
-        etapa.dataConclusao = null;
-        etapa.retornoParaEtapaId = null;
-        await etapa.save({ transaction });
-        await registrarMovimentacao(
-          processo,
-          etapa.id,
-          'PULO_ETAPA',
-          `Etapa opcional "${etapa.nome}" pulada automaticamente na conclusão do processo.`,
-          contexto,
-          {
-            etapaId: etapa.id,
-            etapaNome: etapa.nome,
-            origem: 'CONCLUSAO_PROCESSO',
-            motivoPulo: etapa.motivoPulo,
-          },
-          transaction,
-        );
-        etapasPuladas.push(etapa);
-      }
+      // Etapas opcionais pendentes permanecem PENDENTE no histórico; apenas
+      // etapas obrigatórias impedem a conclusão do processo.
     }
 
     await processoRepo.atualizar(

@@ -70,7 +70,19 @@ Regras de comportamento ligadas a essas permissões:
   pré-selecionado.
 - `processos.assign` permite atribuir responsável ao processo e, isoladamente,
   a cada etapa ainda não concluída/pulada. As atribuições de processo e de etapa
-  são independentes: alterar uma não modifica a outra.
+  são independentes: alterar uma não modifica a outra, e o setor do processo não
+  é preenchido automaticamente. O setor da etapa acompanha automaticamente o
+  setor principal do novo responsável.
+- `tarefas` e `delegacoes` exigem `processos.read`/`processos.assign`. Cada
+  usuário só vê e gerencia as próprias delegações; visões salvas também são
+  privadas por usuário.
+- `usuarios.update` permite redefinir senha, desbloquear login, redefinir MFA e
+  consultar/revogar sessões de outro usuário. Essas ações são auditadas e a
+  redefinição de MFA/senha revoga as sessões do alvo. O próprio usuário gerencia
+  suas sessões em **Segurança**, sem permissão administrativa adicional.
+- Contas com qualquer permissão administrativa (`usuarios.create`,
+  `usuarios.update`, `usuarios.deactivate`, `roles.manage`,
+  `permissions.manage`) precisam de MFA TOTP configurado.
 - `processos.block`, `processos.unblock` e `processos.skip` controlam a etapa
   atual: bloqueio/desbloqueio exigem motivo/justificativa; o pulo exige
   justificativa. Etapas obrigatórias só podem ser puladas quando o fluxo marca
@@ -81,13 +93,16 @@ Regras de comportamento ligadas a essas permissões:
   devolução, sem refazer as etapas intermediárias. A interface permite escolher
   qualquer etapa anterior já concluída.
 - `usuarios.update` permite definir os setores do usuário e seu setor principal
-  (`PUT /api/usuarios/:id/setores`). O setor principal é sugerido ao atribuir o
-  usuário a uma etapa.
+  (`PUT /api/usuarios/:id/setores`). O setor principal é usado automaticamente
+  como setor da etapa quando o usuário é atribuído como responsável.
 - `processos.update` permite ajustar o prazo interno de uma etapa não concluída
   no processo específico, sem alterar o fluxo de origem.
 - O próprio usuário pode alterar nome, e-mail e senha em **Meu perfil**. Quem
   possui `usuarios.update` também pode redefinir a senha de outro usuário; nesse
-  caso a troca é exigida no próximo acesso.
+  caso a troca é exigida no próximo acesso e as sessões são revogadas.
+- A desativação de usuário usa `usuarios.deactivate` e exige um usuário ativo de
+  destino quando houver processos ou etapas atribuídos. A operação é transacional
+  e transfere processos e etapas, cancela delegações e revoga sessões.
 - `reports.read` corresponde ao painel e aos indicadores gerenciais. Não existe
   exportação de relatórios: `reports.export`, `processos.export` e
   `processos.supervise` foram removidas por não possuírem funcionalidade

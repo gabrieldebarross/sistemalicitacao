@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import {
   AlertaErro,
+  AlertaSucesso,
   Botao,
   Campo,
   Carregando,
@@ -16,9 +17,17 @@ import {
   Selecao,
 } from '@/components/ui';
 import { api, mensagemDeErro, TAMANHO_PAGINA_MAX, type Paginacao } from '@/lib/api';
+import { formatarDataHora } from '@/lib/format';
 import { agruparPermissoes } from '@/lib/rotulos';
 import { useSessao } from '@/lib/session';
-import type { Cargo, Papel, Setor, Usuario } from '@/lib/tipos';
+import type {
+  Cargo,
+  Papel,
+  SessaoUsuario,
+  Setor,
+  Usuario,
+  UsuarioAtribuivel,
+} from '@/lib/tipos';
 
 interface Formulario {
   id: number | null;
@@ -64,6 +73,17 @@ export default function UsuariosPage() {
   const [salvandoSetores, setSalvandoSetores] = useState(false);
   const [desativando, setDesativando] = useState<Usuario | null>(null);
   const [processandoDesativar, setProcessandoDesativar] = useState(false);
+  const [destinoDesativarId, setDestinoDesativarId] = useState('');
+  const [usuariosAtribuiveis, setUsuariosAtribuiveis] = useState<
+    UsuarioAtribuivel[]
+  >([]);
+  const [sessoesUsuario, setSessoesUsuario] = useState<Usuario | null>(null);
+  const [sessoes, setSessoes] = useState<SessaoUsuario[]>([]);
+  const [carregandoSessoes, setCarregandoSessoes] = useState(false);
+  const [revogandoSessao, setRevogandoSessao] = useState<string | null>(null);
+  const [resetandoMfa, setResetandoMfa] = useState<Usuario | null>(null);
+  const [processandoAcao, setProcessandoAcao] = useState(false);
+  const [sucesso, setSucesso] = useState('');
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -167,18 +187,94 @@ export default function UsuariosPage() {
     }
   }
 
+  function abrirDesativar(usuario: Usuario) {
+    setDestinoDesativarId('');
+    setDesativando(usuario);
+    api
+      .get<UsuarioAtribuivel[]>('/usuarios/atribuiveis')
+      .then((resposta) =>
+        setUsuariosAtribuiveis(
+          resposta.dados.filter((item) => item.id !== usuario.id),
+        ),
+      )
+      .catch(() => setUsuariosAtribuiveis([]));
+  }
+
   async function desativar() {
     if (!desativando) return;
     setProcessandoDesativar(true);
     setErro('');
+    setSucesso('');
     try {
-      await api.post(`/usuarios/${desativando.id}/desativar`);
+      await api.post(`/usuarios/${desativando.id}/desativar`, {
+        destinoUsuarioId: destinoDesativarId
+          ? Number(destinoDesativarId)
+          : undefined,
+      });
       setDesativando(null);
+      setSucesso('Usuário desativado e atribuições transferidas.');
       await carregar();
     } catch (falha) {
       setErro(mensagemDeErro(falha));
     } finally {
       setProcessandoDesativar(false);
+    }
+  }
+
+  function abrirSessoes(usuario: Usuario) {
+    setSessoesUsuario(usuario);
+    setSessoes([]);
+    setCarregandoSessoes(true);
+    api
+      .get<SessaoUsuario[]>(`/usuarios/${usuario.id}/sessoes`)
+      .then((resposta) => setSessoes(resposta.dados))
+      .catch((falha) => setErro(mensagemDeErro(falha)))
+      .finally(() => setCarregandoSessoes(false));
+  }
+
+  async function revogarSessao(sessaoId: string) {
+    if (!sessoesUsuario) return;
+    setRevogandoSessao(sessaoId);
+    setErro('');
+    try {
+      await api.del(`/usuarios/${sessoesUsuario.id}/sessoes/${sessaoId}`);
+      setSessoes((atual) => atual.filter((item) => item.id !== sessaoId));
+    } catch (falha) {
+      setErro(mensagemDeErro(falha));
+    } finally {
+      setRevogandoSessao(null);
+    }
+  }
+
+  async function desbloquear(usuario: Usuario) {
+    setProcessandoAcao(true);
+    setErro('');
+    setSucesso('');
+    try {
+      await api.post(`/usuarios/${usuario.id}/desbloquear`);
+      setSucesso('Tentativas de login zeradas e bloqueio removido.');
+    } catch (falha) {
+      setErro(mensagemDeErro(falha));
+    } finally {
+      setProcessandoAcao(false);
+    }
+  }
+
+  async function confirmarResetMfa() {
+    if (!resetandoMfa) return;
+    setProcessandoAcao(true);
+    setErro('');
+    setSucesso('');
+    try {
+      await api.post(`/usuarios/${resetandoMfa.id}/mfa/reset`);
+      setResetandoMfa(null);
+      setSucesso(
+        'MFA redefinido. O usuário deverá configurar novamente no próximo acesso.',
+      );
+    } catch (falha) {
+      setErro(mensagemDeErro(falha));
+    } finally {
+      setProcessandoAcao(false);
     }
   }
 
@@ -254,6 +350,8 @@ export default function UsuariosPage() {
           </Botao>
         ) : null}
       </div>
+
+      {sucesso ? <AlertaSucesso mensagem={sucesso} /> : null}
 
       <Cartao>
         <div className="border-b border-slate-200 px-4 py-3">
@@ -340,6 +438,31 @@ export default function UsuariosPage() {
                         {podeEditar ? (
                           <Botao
                             variante="secundario"
+                            onClick={() => abrirSessoes(usuario)}
+                          >
+                            Sessões
+                          </Botao>
+                        ) : null}
+                        {podeEditar ? (
+                          <Botao
+                            variante="secundario"
+                            disabled={processandoAcao}
+                            onClick={() => desbloquear(usuario)}
+                          >
+                            Desbloquear
+                          </Botao>
+                        ) : null}
+                        {podeEditar ? (
+                          <Botao
+                            variante="secundario"
+                            onClick={() => setResetandoMfa(usuario)}
+                          >
+                            Resetar MFA
+                          </Botao>
+                        ) : null}
+                        {podeEditar ? (
+                          <Botao
+                            variante="secundario"
                             onClick={() => abrirEdicao(usuario)}
                           >
                             Editar
@@ -348,7 +471,7 @@ export default function UsuariosPage() {
                         {podeDesativar && usuario.ativo ? (
                           <Botao
                             variante="perigo"
-                            onClick={() => setDesativando(usuario)}
+                            onClick={() => abrirDesativar(usuario)}
                           >
                             Desativar
                           </Botao>
@@ -401,8 +524,8 @@ export default function UsuariosPage() {
                 salvando ||
                 !form?.nome.trim() ||
                 !form?.email.trim() ||
-                (!form?.id && form.senha.length < 8) ||
-                (!!form?.id && form.senha.length > 0 && form.senha.length < 8)
+                (!form?.id && form.senha.length < 12) ||
+                (!!form?.id && form.senha.length > 0 && form.senha.length < 12)
               }
               onClick={salvar}
             >
@@ -437,7 +560,7 @@ export default function UsuariosPage() {
                 rotulo="Senha"
                 htmlFor="usuario-senha"
                 obrigatorio
-                dica="Mínimo de 8 caracteres. O usuário deverá alterá-la no primeiro acesso."
+                dica="Mínimo de 12 caracteres. O usuário deverá alterá-la no primeiro acesso."
               >
                 <Entrada
                   id="usuario-senha"
@@ -453,7 +576,7 @@ export default function UsuariosPage() {
               <Campo
                 rotulo="Redefinir senha (opcional)"
                 htmlFor="usuario-senha"
-                dica="Mínimo de 8 caracteres. Ao redefinir, o usuário deverá alterá-la no próximo acesso."
+                dica="Mínimo de 12 caracteres. Ao redefinir, o usuário deverá alterá-la no próximo acesso e todas as sessões serão encerradas."
               >
                 <Entrada
                   id="usuario-senha"
@@ -486,12 +609,19 @@ export default function UsuariosPage() {
               <input
                 type="checkbox"
                 checked={form.ativo}
+                disabled={form.id !== null && form.ativo}
                 onChange={(evento) =>
                   setForm({ ...form, ativo: evento.target.checked })
                 }
               />
               Ativo
             </label>
+            {form.id !== null && form.ativo ? (
+              <p className="text-xs text-slate-500">
+                Para desativar, use a ação “Desativar” na lista, informando o
+                usuário de destino das atribuições.
+              </p>
+            ) : null}
           </div>
         ) : null}
       </Modal>
@@ -675,10 +805,106 @@ export default function UsuariosPage() {
           </>
         }
       >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-600">
+            Desativar <strong>{desativando?.nome}</strong>? O usuário perderá o
+            acesso imediatamente, as sessões serão revogadas, as delegações
+            serão canceladas e as atribuições serão transferidas.
+          </p>
+          <Campo
+            rotulo="Usuário de destino das atribuições"
+            htmlFor="destino-desativar"
+            dica="Obrigatório quando o usuário possuir processos ou etapas atribuídos. As etapas assumem o setor principal do destino."
+          >
+            <Selecao
+              id="destino-desativar"
+              value={destinoDesativarId}
+              onChange={(evento) => setDestinoDesativarId(evento.target.value)}
+            >
+              <option value="">Sem transferência</option>
+              {usuariosAtribuiveis.map((usuario) => (
+                <option key={usuario.id} value={usuario.id}>
+                  {usuario.nome}
+                </option>
+              ))}
+            </Selecao>
+          </Campo>
+          <p className="text-xs text-slate-500">
+            O histórico e as movimentações são preservados.
+          </p>
+        </div>
+      </Modal>
+
+      <Modal
+        aberto={sessoesUsuario !== null}
+        titulo={`Sessões de ${sessoesUsuario?.nome ?? ''}`}
+        aoFechar={() => setSessoesUsuario(null)}
+        rodape={
+          <Botao variante="secundario" onClick={() => setSessoesUsuario(null)}>
+            Fechar
+          </Botao>
+        }
+      >
+        {carregandoSessoes ? (
+          <Carregando texto="Carregando sessões…" />
+        ) : sessoes.length === 0 ? (
+          <p className="text-sm text-slate-500">Nenhuma sessão ativa.</p>
+        ) : (
+          <ul className="divide-y divide-slate-100">
+            {sessoes.map((sessao) => (
+              <li
+                key={sessao.id}
+                className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="text-sm">
+                  <p className="font-medium text-slate-800">
+                    {sessao.userAgent
+                      ? sessao.userAgent.slice(0, 90)
+                      : 'Dispositivo não identificado'}
+                    {sessao.atual ? ' (sessão atual)' : ''}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    IP {sessao.ip ?? '—'} · Início{' '}
+                    {formatarDataHora(sessao.criadaEm)} · Expira{' '}
+                    {formatarDataHora(sessao.expiraEm)}
+                  </p>
+                </div>
+                <Botao
+                  variante="secundario"
+                  disabled={revogandoSessao === sessao.id}
+                  onClick={() => revogarSessao(sessao.id)}
+                >
+                  {revogandoSessao === sessao.id ? 'Revogando…' : 'Revogar'}
+                </Botao>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Modal>
+
+      <Modal
+        aberto={resetandoMfa !== null}
+        titulo="Redefinir MFA"
+        aoFechar={() => setResetandoMfa(null)}
+        rodape={
+          <>
+            <Botao variante="secundario" onClick={() => setResetandoMfa(null)}>
+              Cancelar
+            </Botao>
+            <Botao
+              variante="perigo"
+              disabled={processandoAcao}
+              onClick={confirmarResetMfa}
+            >
+              {processandoAcao ? 'Redefinindo…' : 'Redefinir MFA'}
+            </Botao>
+          </>
+        }
+      >
         <p className="text-sm text-slate-600">
-          Desativar <strong>{desativando?.nome}</strong>? O usuário perderá o
-          acesso ao sistema imediatamente. O histórico e as movimentações são
-          preservados.
+          Redefinir o MFA de <strong>{resetandoMfa?.nome}</strong>? As sessões
+          serão revogadas e o usuário deverá configurar um novo autenticador no
+          próximo acesso. Esta ação fica registrada na auditoria.
         </p>
       </Modal>
     </div>

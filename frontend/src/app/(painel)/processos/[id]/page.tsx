@@ -109,7 +109,6 @@ export default function ProcessoDetalhePage() {
   const [setorId, setSetorId] = useState('');
   const [responsavelId, setResponsavelId] = useState('');
   const [responsavelEtapaId, setResponsavelEtapaId] = useState('');
-  const [setorEtapaId, setSetorEtapaId] = useState('');
   const [prazoDias, setPrazoDias] = useState('');
   const [setores, setSetores] = useState<Setor[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioAtribuivel[]>([]);
@@ -179,15 +178,6 @@ export default function ProcessoDetalhePage() {
       .catch(() => setSetores([]));
   }
 
-  function setorPrincipalDoUsuario(usuario: UsuarioAtribuivel): number | null {
-    return (
-      usuario.setorPrincipalId ??
-      usuario.setores.find((setor) => setor.principal)?.id ??
-      usuario.setores[0]?.id ??
-      null
-    );
-  }
-
   function abrirAtribuir() {
     setSetorId(processo?.setorAtual ? String(processo.setorAtual.id) : '');
     setResponsavelId(
@@ -203,8 +193,6 @@ export default function ProcessoDetalhePage() {
     setResponsavelEtapaId(
       etapa.responsavel ? String(etapa.responsavel.id) : '',
     );
-    setSetorEtapaId(etapa.setor ? String(etapa.setor.id) : '');
-    carregarSetores();
     carregarUsuarios();
   }
 
@@ -239,6 +227,22 @@ export default function ProcessoDetalhePage() {
   const etapaEmAtribuicao = processo.etapas.find(
     (etapa) => etapa.id === etapaAtribuir,
   );
+  const usuarioEtapaSelecionado = usuarios.find(
+    (item) => String(item.id) === responsavelEtapaId,
+  );
+  const setorPrincipalEtapa = usuarioEtapaSelecionado
+    ? (usuarioEtapaSelecionado.setorPrincipalId ??
+      usuarioEtapaSelecionado.setores.find((setor) => setor.principal)?.id ??
+      usuarioEtapaSelecionado.setores[0]?.id ??
+      null)
+    : null;
+  const nomeSetorPrincipalEtapa = setorPrincipalEtapa
+    ? (usuarioEtapaSelecionado?.setores.find(
+        (setor) => setor.id === setorPrincipalEtapa,
+      )?.nome ??
+      setores.find((setor) => setor.id === setorPrincipalEtapa)?.nome ??
+      '—')
+    : '—';
 
   return (
     <div className="flex flex-col gap-6">
@@ -520,13 +524,44 @@ export default function ProcessoDetalhePage() {
               </dd>
             </div>
             <div>
-              <dt className="text-slate-500">Setor atual</dt>
-              <dd className="text-slate-800">{processo.setorAtual?.nome ?? '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-slate-500">Responsável atual</dt>
+              <dt className="text-slate-500">Responsável do processo</dt>
               <dd className="text-slate-800">
                 {processo.responsavelAtual?.nome ?? '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Setor responsável do processo</dt>
+              <dd className="text-slate-800">
+                {processo.setorAtual?.nome ?? '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Etapa atual</dt>
+              <dd className="text-slate-800">
+                {processo.etapaAtual?.nome ?? '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">
+                Responsável da etapa atual
+              </dt>
+              <dd className="text-slate-800">
+                {etapaAtual?.responsavel?.nome ?? '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Setor da etapa atual</dt>
+              <dd className="text-slate-800">
+                {etapaAtual?.setor?.nome ?? '—'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-slate-500">Prazo da etapa atual</dt>
+              <dd className="text-slate-800">
+                {formatarData(etapaAtual?.dataPrevista ?? null)}
+                {etapaAtual?.prazoGestaoDias
+                  ? ` (${etapaAtual.prazoGestaoDias} dias)`
+                  : ''}
               </dd>
             </div>
             <div>
@@ -909,9 +944,9 @@ export default function ProcessoDetalhePage() {
         <div className="flex flex-col gap-4">
           <p className="text-sm text-slate-600">
             A alteração vale apenas para o processo e não modifica o responsável
-            das etapas.
+            das etapas. O setor do processo é independente do usuário escolhido.
           </p>
-          <Campo rotulo="Setor" htmlFor="setor">
+          <Campo rotulo="Setor do processo" htmlFor="setor">
             <Selecao
               id="setor"
               value={setorId}
@@ -925,23 +960,11 @@ export default function ProcessoDetalhePage() {
               ))}
             </Selecao>
           </Campo>
-          <Campo rotulo="Responsável" htmlFor="responsavel">
+          <Campo rotulo="Responsável do processo" htmlFor="responsavel">
             <Selecao
               id="responsavel"
               value={responsavelId}
-              onChange={(evento) => {
-                const valor = evento.target.value;
-                setResponsavelId(valor);
-                const usuario = usuarios.find(
-                  (item) => String(item.id) === valor,
-                );
-                const principal = usuario
-                  ? setorPrincipalDoUsuario(usuario)
-                  : null;
-                if (principal) {
-                  setSetorId(String(principal));
-                }
-              }}
+              onChange={(evento) => setResponsavelId(evento.target.value)}
             >
               <option value="">Sem responsável definido</option>
               {usuarios.map((usuario) => (
@@ -986,7 +1009,6 @@ export default function ProcessoDetalhePage() {
                         responsavelId: responsavelEtapaId
                           ? Number(responsavelEtapaId)
                           : null,
-                        setorId: setorEtapaId ? Number(setorEtapaId) : null,
                       },
                     ),
                   () => setEtapaAtribuir(null),
@@ -1001,29 +1023,20 @@ export default function ProcessoDetalhePage() {
         <div className="flex flex-col gap-4">
           <p className="text-sm text-slate-600">
             A atribuição vale apenas para esta etapa e não altera as demais
-            etapas nem o responsável do processo.
+            etapas nem o responsável do processo. O setor da etapa acompanha
+            automaticamente o setor principal do novo responsável.
           </p>
           <Campo
-            rotulo="Responsável"
+            rotulo="Responsável da etapa"
             htmlFor="responsavel-etapa"
-            dica="Ao selecionar, o setor principal do usuário é sugerido automaticamente."
+            dica="Ao trocar o responsável, o setor da etapa passa a ser o setor principal dele."
           >
             <Selecao
               id="responsavel-etapa"
               value={responsavelEtapaId}
-              onChange={(evento) => {
-                const valor = evento.target.value;
-                setResponsavelEtapaId(valor);
-                const usuario = usuarios.find(
-                  (item) => String(item.id) === valor,
-                );
-                const principal = usuario
-                  ? setorPrincipalDoUsuario(usuario)
-                  : null;
-                if (principal) {
-                  setSetorEtapaId(String(principal));
-                }
-              }}
+              onChange={(evento) =>
+                setResponsavelEtapaId(evento.target.value)
+              }
             >
               <option value="">Sem responsável</option>
               {usuarios.map((usuario) => (
@@ -1039,24 +1052,14 @@ export default function ProcessoDetalhePage() {
               ))}
             </Selecao>
           </Campo>
-          <Campo
-            rotulo="Setor da etapa"
-            htmlFor="setor-etapa"
-            dica="Usado para exibir e encaminhar a etapa ao setor correto."
-          >
-            <Selecao
-              id="setor-etapa"
-              value={setorEtapaId}
-              onChange={(evento) => setSetorEtapaId(evento.target.value)}
-            >
-              <option value="">Sem setor definido</option>
-              {setores.map((setor) => (
-                <option key={setor.id} value={setor.id}>
-                  {setor.nome}
-                </option>
-              ))}
-            </Selecao>
-          </Campo>
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Setor da etapa após a atribuição
+            </p>
+            <p className="mt-0.5 text-slate-800">
+              {responsavelEtapaId ? nomeSetorPrincipalEtapa : 'Sem setor definido'}
+            </p>
+          </div>
         </div>
       </Modal>
 

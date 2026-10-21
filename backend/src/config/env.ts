@@ -31,8 +31,17 @@ const envSchema = z.object({
   DB_DIALECT: z.literal('mysql').default('mysql'),
 
   JWT_SECRET: z.string().optional(),
-  JWT_EXPIRES_IN: z.string().default('8h'),
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
+
+  PASSWORD_MIN_LENGTH: z.coerce.number().int().min(8).max(128).default(12),
+  PASSWORD_HISTORY_SIZE: z.coerce.number().int().min(1).max(20).default(5),
+  LOGIN_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
+  LOGIN_LOCK_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
+
+  MFA_ENCRYPTION_KEY: z.string().optional(),
+  MFA_ISSUER: z.string().min(1).max(100).default('Sistema de Licitações'),
 });
 
 // Valores vazios são tratados como "não definidos" para que os defaults atuem.
@@ -64,6 +73,11 @@ if (raw.NODE_ENV === 'production') {
       'JWT_SECRET deve ser definido com ao menos 32 caracteres em produção.',
     );
   }
+  if (!raw.MFA_ENCRYPTION_KEY || raw.MFA_ENCRYPTION_KEY.length < 32) {
+    throw new Error(
+      'MFA_ENCRYPTION_KEY deve ser definido com ao menos 32 caracteres em produção.',
+    );
+  }
 }
 
 function parseCorsOrigins(value: string): string[] {
@@ -84,7 +98,20 @@ export const env = {
   bcryptSaltRounds: raw.BCRYPT_SALT_ROUNDS,
   jwt: {
     secret: raw.JWT_SECRET,
-    expiresIn: raw.JWT_EXPIRES_IN,
+    accessExpiresIn: raw.JWT_ACCESS_EXPIRES_IN,
+    refreshExpiresIn: raw.JWT_REFRESH_EXPIRES_IN,
+  },
+  password: {
+    minLength: raw.PASSWORD_MIN_LENGTH,
+    historySize: raw.PASSWORD_HISTORY_SIZE,
+  },
+  login: {
+    maxAttempts: raw.LOGIN_MAX_ATTEMPTS,
+    lockMinutes: raw.LOGIN_LOCK_MINUTES,
+  },
+  mfa: {
+    encryptionKey: raw.MFA_ENCRYPTION_KEY,
+    issuer: raw.MFA_ISSUER,
   },
   db: {
     host: raw.DB_HOST,

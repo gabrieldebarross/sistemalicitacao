@@ -25,6 +25,11 @@ Processo → ProcessoEtapa / Movimentacao / Responsabilidades / Histórico
 | `Setor` | Unidade administrativa. |
 | `Role` / `Permission` / `UserRole` / `RolePermission` | RBAC. |
 | `Auditoria` | Registro de operações relevantes de segurança. |
+| `Sessao` | Sessão revogável; guarda hash do refresh token, estado de MFA e expiração. |
+| `SenhaHistorico` | Hashes das últimas senhas, para impedir reutilização. |
+| `MfaCodigoRecuperacao` | Códigos de recuperação de MFA, armazenados somente como hash. |
+| `VisaoSalva` | Filtros da listagem de processos, privados por usuário. |
+| `Delegacao` | Compartilhamento temporário de tarefas entre usuários. |
 
 Entidades adicionais (versões de fluxo, transições, fundamentos legais,
 documentos) serão avaliadas quando houver necessidade comprovada.
@@ -50,6 +55,10 @@ Cadastros e workflow: `cargos`, `setores`, `tipos_processo`, `fluxos`, `fases`,
 Acesso e auditoria: `usuarios`, `roles`, `permissions`, `user_roles`,
 `role_permissions`, `user_sector_assignments`, `auditoria`.
 
+Sessões e segurança: `sessoes`, `senhas_historico`, `mfa_codigos_recuperacao`.
+
+Produtividade e colaboração: `visoes_salvas`, `delegacoes`.
+
 Detalhes em `backend/database/migrations/`.
 
 ## Decisões de modelagem
@@ -57,9 +66,19 @@ Detalhes em `backend/database/migrations/`.
 - **Cargos:** apenas o nome (normalizado) + `nome_original` para rastreabilidade;
   os campos numéricos e demais atributos de origem foram removidos (ADR 0004).
 - **Vínculo usuário-setor:** `user_sector_assignments` permite múltiplos setores
-  por usuário e marca no máximo um como principal. A atribuição de etapa usa o
-  setor principal como sugestão, mas o setor da etapa continua explícito e
-  auditável.
+  por usuário e marca no máximo um como principal. O setor da etapa acompanha
+  automaticamente o setor principal do responsável; o setor do processo é
+  independente e definido explicitamente.
+- **Sessões:** o access token (curto) carrega o identificador da sessão (`sid`).
+  O refresh token é rotacionado e armazenado somente como hash; a reutilização
+  fora da janela concorrente revoga a sessão. A sessão pendente de MFA não recebe
+  access token até a conclusão do segundo fator.
+- **Senhas:** hash bcrypt, mínimo de 12 caracteres e histórico das últimas 5
+  senhas para impedir reutilização.
+- **MFA:** TOTP para contas com permissões administrativas. O segredo é
+  criptografado com AES-256-GCM; os 10 códigos de recuperação são armazenados
+  somente como hash e consumidos no uso. A redefinição por administrador revoga
+  sessões e é auditada.
 - **Versionamento de fluxo:** o número da versão fica na própria linha de
   `fluxos` (`versao`), com unicidade em `(tipo_processo_id, nome, versao)`. O
   processo guarda a referência da versão usada e a instância de etapa copia

@@ -5,9 +5,12 @@ import {
   criarUsuarioSchema,
   definirRolesSchema,
   definirSetoresSchema,
+  desativarUsuarioSchema,
   idParamSchema,
   listarUsuarioQuerySchema,
+  usuarioSessaoParamSchema,
 } from '../schemas/index.js';
+import * as sessaoService from '../services/sessao.service.js';
 import * as usuarioService from '../services/usuario.service.js';
 import { contextoDe } from '../utils/contexto.js';
 import { responderOk, responderPaginado } from '../utils/http.js';
@@ -75,5 +78,49 @@ export async function definirSetores(
 
 export async function desativar(req: Request, res: Response): Promise<void> {
   const { id } = validar(idParamSchema, req.params);
-  responderOk(res, await usuarioService.desativar(id, contextoDe(req, res)));
+  const { destinoUsuarioId } = validar(desativarUsuarioSchema, req.body ?? {});
+  responderOk(
+    res,
+    await usuarioService.desativar(
+      id,
+      contextoDe(req, res),
+      destinoUsuarioId,
+    ),
+  );
+}
+
+export async function desbloquear(req: Request, res: Response): Promise<void> {
+  const { id } = validar(idParamSchema, req.params);
+  responderOk(
+    res,
+    await usuarioService.desbloquear(id, contextoDe(req, res)),
+  );
+}
+
+export async function resetarMfa(req: Request, res: Response): Promise<void> {
+  const { id } = validar(idParamSchema, req.params);
+  responderOk(
+    res,
+    await usuarioService.resetarMfa(id, contextoDe(req, res)),
+  );
+}
+
+export async function listarSessoes(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { id } = validar(idParamSchema, req.params);
+  responderOk(
+    res,
+    await sessaoService.listarSessoesAdmin(id, req.autenticacao?.sessaoId),
+  );
+}
+
+export async function revogarSessao(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { id, sessaoId } = validar(usuarioSessaoParamSchema, req.params);
+  await sessaoService.revogarSessaoAdmin(id, sessaoId);
+  responderOk(res, { mensagem: 'Sessão revogada.' });
 }

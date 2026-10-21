@@ -15,6 +15,7 @@ export function contextoDe(
     usuarioId: auth?.usuarioId ?? null,
     requestId,
     ip: req.ip ?? null,
+    userAgent: req.header('user-agent') ?? null,
     permissoes: auth?.permissoes ?? new Set<string>(),
   };
 }

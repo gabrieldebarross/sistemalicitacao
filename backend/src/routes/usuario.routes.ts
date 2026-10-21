@@ -53,3 +53,23 @@ usuarioRouter.post(
   exigirPermissao(PERMISSIONS.USUARIOS_DEACTIVATE),
   controller.desativar,
 );
+usuarioRouter.post(
+  '/:id/desbloquear',
+  exigirPermissao(PERMISSIONS.USUARIOS_UPDATE),
+  controller.desbloquear,
+);
+usuarioRouter.post(
+  '/:id/mfa/reset',
+  exigirPermissao(PERMISSIONS.USUARIOS_UPDATE),
+  controller.resetarMfa,
+);
+usuarioRouter.get(
+  '/:id/sessoes',
+  exigirPermissao(PERMISSIONS.USUARIOS_UPDATE),
+  controller.listarSessoes,
+);
+usuarioRouter.delete(
+  '/:id/sessoes/:sessaoId',
+  exigirPermissao(PERMISSIONS.USUARIOS_UPDATE),
+  controller.revogarSessao,
+);

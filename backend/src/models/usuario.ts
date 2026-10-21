@@ -25,6 +25,12 @@ export class Usuario extends Model<
   declare cargoId: ForeignKey<number | null>;
   declare ativo: CreationOptional<boolean>;
   declare ultimoAcessoEm: CreationOptional<Date | null>;
+  declare tentativasFalhas: CreationOptional<number>;
+  declare bloqueadoAte: CreationOptional<Date | null>;
+  declare mfaSegredoCriptografado: CreationOptional<string | null>;
+  declare mfaAtivo: CreationOptional<boolean>;
+  declare mfaConfiguradoEm: CreationOptional<Date | null>;
+  declare mfaResetadoEm: CreationOptional<Date | null>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 
@@ -50,6 +56,20 @@ Usuario.init(
     cargoId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
     ativo: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     ultimoAcessoEm: { type: DataTypes.DATE, allowNull: true },
+    tentativasFalhas: {
+      type: DataTypes.INTEGER.UNSIGNED,
+      allowNull: false,
+      defaultValue: 0,
+    },
+    bloqueadoAte: { type: DataTypes.DATE, allowNull: true },
+    mfaSegredoCriptografado: { type: DataTypes.TEXT, allowNull: true },
+    mfaAtivo: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    mfaConfiguradoEm: { type: DataTypes.DATE, allowNull: true },
+    mfaResetadoEm: { type: DataTypes.DATE, allowNull: true },
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
   },

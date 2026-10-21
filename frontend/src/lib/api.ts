@@ -22,6 +22,7 @@ export interface Resposta<T> {
   sucesso: true;
   dados: T;
   paginacao?: Paginacao;
+  resumo?: unknown;
 }
 
 export class ApiError extends Error {
@@ -58,11 +59,7 @@ function lerCookie(nome: string): string | undefined {
   return undefined;
 }
 
-async function requisitar<T>(
-  metodo: string,
-  caminho: string,
-  corpo?: unknown,
-): Promise<Resposta<T>> {
+function montarHeaders(metodo: string, corpo: unknown): Record<string, string> {
   const headers: Record<string, string> = {};
   if (corpo !== undefined) {
     headers['Content-Type'] = 'application/json';
@@ -73,16 +70,77 @@ async function requisitar<T>(
       headers['x-csrf-token'] = csrf;
     }
   }
+  return headers;
+}
 
+async function enviar(
+  metodo: string,
+  caminho: string,
+  corpo: unknown,
+): Promise<{ resposta: Response; json: Record<string, unknown> }> {
   const resposta = await fetch(`${API_URL}${caminho}`, {
     method: metodo,
-    headers,
+    headers: montarHeaders(metodo, corpo),
     credentials: 'include',
     body: corpo !== undefined ? JSON.stringify(corpo) : undefined,
   });
-
   const texto = await resposta.text();
-  const json = texto ? (JSON.parse(texto) as Record<string, unknown>) : {};
+  let json: Record<string, unknown> = {};
+  if (texto) {
+    try {
+      json = JSON.parse(texto) as Record<string, unknown>;
+    } catch {
+      json = {};
+    }
+  }
+  return { resposta, json };
+}
+
+let renovacaoEmAndamento: Promise<boolean> | null = null;
+
+async function renovarSessao(): Promise<boolean> {
+  if (!renovacaoEmAndamento) {
+    renovacaoEmAndamento = (async () => {
+      try {
+        const { resposta } = await enviar('POST', '/auth/refresh', undefined);
+        return resposta.ok;
+      } catch {
+        return false;
+      } finally {
+        renovacaoEmAndamento = null;
+      }
+    })();
+  }
+  return renovacaoEmAndamento;
+}
+
+function podeRenovar(caminho: string): boolean {
+  return ![
+    '/auth/login',
+    '/auth/refresh',
+    '/auth/logout',
+    '/auth/mfa/configurar',
+    '/auth/mfa/confirmar',
+    '/auth/mfa/verificar',
+  ].some((prefixo) => caminho.startsWith(prefixo));
+}
+
+async function requisitar<T>(
+  metodo: string,
+  caminho: string,
+  corpo?: unknown,
+  tentarRenovar = true,
+): Promise<Resposta<T>> {
+  let { resposta, json } = await enviar(metodo, caminho, corpo);
+
+  if (
+    resposta.status === 401 &&
+    tentarRenovar &&
+    podeRenovar(caminho) &&
+    (await renovarSessao())
+  ) {
+    ({ resposta, json } = await enviar(metodo, caminho, corpo));
+  }
 
   if (!resposta.ok || json.sucesso === false) {
     const mensagem =

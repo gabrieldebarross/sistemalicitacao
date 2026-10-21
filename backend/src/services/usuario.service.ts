@@ -1,3 +1,5 @@
+import type { Transaction } from 'sequelize';
+
 import { sequelize } from '../config/database.js';
 import { normalizarEmail, normalizarNome } from '../domain/normalization.js';
 import {
@@ -6,15 +8,21 @@ import {
   ValidationError,
 } from '../errors/app-error.js';
 import type { Usuario } from '../models/usuario.js';
+import * as delegacaoRepo from '../repositories/delegacao.repository.js';
+import * as movRepo from '../repositories/movimentacao.repository.js';
+import * as processoRepo from '../repositories/processo.repository.js';
 import * as roleRepo from '../repositories/role.repository.js';
+import * as sessaoRepo from '../repositories/sessao.repository.js';
 import * as setorRepo from '../repositories/setor.repository.js';
 import * as usuarioRepo from '../repositories/usuario.repository.js';
 import type { ContextoRequisicao } from '../types/context.js';
 import { diffAuditoria } from '../utils/audit-diff.js';
 import { montarPaginado, type ResultadoPaginado } from '../utils/http.js';
-import { hashSenha } from '../utils/password.js';
 import { resolverPaginacao } from '../utils/pagination.js';
+import { hashSenha } from '../utils/password.js';
 import * as auditoria from './auditoria.service.js';
+import * as mfaService from './mfa.service.js';
+import * as senhaService from './senha.service.js';
 
 export interface SetorUsuarioDTO {
   id: number;
@@ -187,6 +195,7 @@ export async function criar(
         transaction,
       );
     }
+    await senhaService.registrarSenha(criado.id, senhaHash, transaction);
     return criado;
   });
 
@@ -221,6 +230,11 @@ export async function atualizar(
     ativo: usuario.ativo,
     senhaHash: usuario.senhaHash,
   };
+  if (input.ativo === false && usuario.ativo) {
+    throw new ValidationError(
+      'Use a desativação de usuário para transferir atribuições e encerrar sessões.',
+    );
+  }
   if (input.email !== undefined) {
     const email = normalizarEmail(input.email);
     const existente = await usuarioRepo.buscarPorEmail(email);
@@ -239,11 +253,18 @@ export async function atualizar(
     usuario.ativo = input.ativo;
   }
   if (input.senha !== undefined) {
-    usuario.senhaHash = await hashSenha(input.senha);
+    const hash = await senhaService.validarPoliticaSenha(usuario, input.senha);
+    usuario.senhaHash = hash;
     // Redefinição administrativa exige troca no próximo acesso.
     usuario.senhaProvisoria = true;
+    usuario.tentativasFalhas = 0;
+    usuario.bloqueadoAte = null;
   }
   await usuario.save();
+  if (input.senha !== undefined) {
+    await senhaService.registrarSenha(usuario.id, usuario.senhaHash);
+    await sessaoRepo.revogarTodasDoUsuario(usuario.id, new Date());
+  }
   const alteracoes = diffAuditoria(
     antes,
     {
@@ -365,7 +386,188 @@ export async function definirSetores(
   return buscarPorId(id);
 }
 
+async function setorPrincipalDoUsuario(
+  usuarioId: number,
+  transaction?: Transaction,
+): Promise<number | null> {
+  const vinculos = await usuarioRepo.listarVinculosSetores(
+    [usuarioId],
+    transaction,
+  );
+  return (
+    vinculos.find((vinculo) => vinculo.principal)?.setorId ??
+    vinculos[0]?.setorId ??
+    null
+  );
+}
+
 export async function desativar(
+  id: number,
+  contexto: ContextoRequisicao,
+  destinoUsuarioId?: number,
+): Promise<UsuarioDTO> {
+  if (contexto.usuarioId === id) {
+    throw new ValidationError('Não é possível desativar o próprio usuário.');
+  }
+  const usuario = await usuarioRepo.buscarPorId(id);
+  if (!usuario) {
+    throw new NotFoundError('Usuário não encontrado.');
+  }
+  if (!usuario.ativo) {
+    return buscarPorId(id);
+  }
+
+  let destino: Usuario | null = null;
+  if (destinoUsuarioId !== undefined) {
+    if (destinoUsuarioId === id) {
+      throw new ValidationError(
+        'O destino da transferência deve ser diferente do usuário desativado.',
+      );
+    }
+    destino = await usuarioRepo.buscarPorId(destinoUsuarioId);
+    if (!destino || !destino.ativo) {
+      throw new ValidationError(
+        'O usuário de destino da transferência não existe ou está inativo.',
+      );
+    }
+  }
+
+  const processosTransferidos: Array<{
+    id: number;
+    numero: string;
+    nome: string;
+  }> = [];
+  const etapasTransferidas: Array<{
+    processoId: number;
+    etapaId: number;
+    etapaNome: string;
+  }> = [];
+  let setorDestinoId: number | null = null;
+
+  await sequelize.transaction(async (transaction) => {
+    const processos = await processoRepo.listarAtribuidosAoUsuario(
+      id,
+      transaction,
+    );
+    const etapas = await processoRepo.listarEtapasAtivasDoUsuario(
+      id,
+      transaction,
+    );
+
+    if ((processos.length > 0 || etapas.length > 0) && !destino) {
+      throw new ValidationError(
+        'O usuário possui processos ou etapas atribuídos. Informe um usuário ativo de destino para a transferência.',
+      );
+    }
+
+    if (destino) {
+      setorDestinoId = await setorPrincipalDoUsuario(destino.id, transaction);
+    }
+
+    usuario.ativo = false;
+    usuario.bloqueadoAte = null;
+    usuario.tentativasFalhas = 0;
+    await usuario.save({ transaction });
+
+    if (destino) {
+      for (const processo of processos) {
+        processo.responsavelAtualId = destino.id;
+        await processo.save({ transaction });
+        processosTransferidos.push({
+          id: processo.id,
+          numero: processo.numero,
+          nome: processo.nome,
+        });
+        await movRepo.criar(
+          {
+            processoId: processo.id,
+            processoEtapaId: null,
+            usuarioId: contexto.usuarioId,
+            setorId: processo.setorAtualId,
+            tipo: 'ALTERACAO',
+            descricao: `Responsável do processo transferido de ${usuario.nome} para ${destino.nome} por desativação de usuário.`,
+            metadados: {
+              origem: 'DESATIVACAO_USUARIO',
+              usuarioDesativadoId: id,
+              usuarioDesativadoNome: usuario.nome,
+              novoResponsavelId: destino.id,
+              novoResponsavelNome: destino.nome,
+            },
+            correlacaoId: contexto.requestId || null,
+          },
+          transaction,
+        );
+      }
+
+      for (const etapa of etapas) {
+        const setorAnteriorId = etapa.setorId;
+        etapa.responsavelId = destino.id;
+        etapa.setorId = setorDestinoId;
+        await etapa.save({ transaction });
+        etapasTransferidas.push({
+          processoId: etapa.processoId,
+          etapaId: etapa.id,
+          etapaNome: etapa.nome,
+        });
+        await movRepo.criar(
+          {
+            processoId: etapa.processoId,
+            processoEtapaId: etapa.id,
+            usuarioId: contexto.usuarioId,
+            setorId: setorDestinoId,
+            tipo: 'ALTERACAO',
+            descricao: `Etapa "${etapa.nome}" transferida de ${usuario.nome} para ${destino.nome} por desativação de usuário.`,
+            metadados: {
+              origem: 'DESATIVACAO_USUARIO',
+              etapaId: etapa.id,
+              etapaNome: etapa.nome,
+              usuarioDesativadoId: id,
+              usuarioDesativadoNome: usuario.nome,
+              novoResponsavelId: destino.id,
+              novoResponsavelNome: destino.nome,
+              setorAnteriorId,
+              novoSetorId: setorDestinoId,
+            },
+            correlacaoId: contexto.requestId || null,
+          },
+          transaction,
+        );
+      }
+    }
+
+    await delegacaoRepo.cancelarDoUsuario(
+      id,
+      contexto.usuarioId,
+      transaction,
+    );
+    await sessaoRepo.revogarTodasDoUsuario(
+      id,
+      new Date(),
+      undefined,
+      transaction,
+    );
+  });
+
+  await auditoria.registrar(contexto, {
+    acao: 'DESATIVAR',
+    recurso: 'usuario',
+    recursoId: id,
+    metadados: {
+      nome: usuario.nome,
+      email: usuario.email,
+      destinoUsuarioId: destino?.id ?? null,
+      destinoUsuarioNome: destino?.nome ?? null,
+      setorDestinoId,
+      processosTransferidos,
+      etapasTransferidas,
+      sessoesRevogadas: true,
+      delegacoesCanceladas: true,
+    },
+  });
+  return buscarPorId(id);
+}
+
+export async function desbloquear(
   id: number,
   contexto: ContextoRequisicao,
 ): Promise<UsuarioDTO> {
@@ -373,10 +575,35 @@ export async function desativar(
   if (!usuario) {
     throw new NotFoundError('Usuário não encontrado.');
   }
-  usuario.ativo = false;
+  usuario.tentativasFalhas = 0;
+  usuario.bloqueadoAte = null;
   await usuario.save();
   await auditoria.registrar(contexto, {
-    acao: 'DESATIVAR',
+    acao: 'DESBLOQUEAR_LOGIN',
+    recurso: 'usuario',
+    recursoId: id,
+    metadados: { nome: usuario.nome, email: usuario.email },
+  });
+  return buscarPorId(id);
+}
+
+export async function resetarMfa(
+  id: number,
+  contexto: ContextoRequisicao,
+): Promise<UsuarioDTO> {
+  if (contexto.usuarioId === id) {
+    throw new ValidationError(
+      'Use seus códigos de recuperação para redefinir o próprio MFA.',
+    );
+  }
+  const usuario = await usuarioRepo.buscarPorId(id);
+  if (!usuario) {
+    throw new NotFoundError('Usuário não encontrado.');
+  }
+  await mfaService.resetarMfa(usuario);
+  await sessaoRepo.revogarTodasDoUsuario(id, new Date());
+  await auditoria.registrar(contexto, {
+    acao: 'RESETAR_MFA',
     recurso: 'usuario',
     recursoId: id,
     metadados: { nome: usuario.nome, email: usuario.email },

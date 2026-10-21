@@ -6,20 +6,25 @@
  */
 import { Auditoria } from './auditoria.js';
 import { Cargo } from './cargo.js';
+import { Delegacao } from './delegacao.js';
 import { Etapa } from './etapa.js';
 import { Fase } from './fase.js';
 import { Fluxo } from './fluxo.js';
+import { MfaCodigoRecuperacao } from './mfa-codigo-recuperacao.js';
 import { Movimentacao } from './movimentacao.js';
 import { Permission } from './permission.js';
 import { Processo } from './processo.js';
 import { ProcessoEtapa } from './processo-etapa.js';
 import { Role } from './role.js';
 import { RolePermission } from './role-permission.js';
+import { SenhaHistorico } from './senha-historico.js';
+import { Sessao } from './sessao.js';
 import { Setor } from './setor.js';
 import { TipoProcesso } from './tipo-processo.js';
 import { Usuario } from './usuario.js';
 import { UserRole } from './user-role.js';
 import { UserSectorAssignment } from './user-sector-assignment.js';
+import { VisaoSalva } from './visao-salva.js';
 
 // Cargo / Usuario
 Cargo.hasMany(Usuario, { foreignKey: 'cargoId', as: 'usuarios' });
@@ -148,6 +153,46 @@ UserSectorAssignment.belongsTo(Setor, {
   as: 'setor',
 });
 
+// Visões salvas, delegações e sessões
+Usuario.hasMany(VisaoSalva, { foreignKey: 'usuarioId', as: 'visoesSalvas' });
+VisaoSalva.belongsTo(Usuario, { foreignKey: 'usuarioId', as: 'usuario' });
+
+Usuario.hasMany(Delegacao, {
+  foreignKey: 'origemUsuarioId',
+  as: 'delegacoesOrigem',
+});
+Usuario.hasMany(Delegacao, {
+  foreignKey: 'destinoUsuarioId',
+  as: 'delegacoesDestino',
+});
+Delegacao.belongsTo(Usuario, {
+  foreignKey: 'origemUsuarioId',
+  as: 'origem',
+});
+Delegacao.belongsTo(Usuario, {
+  foreignKey: 'destinoUsuarioId',
+  as: 'destino',
+});
+Delegacao.belongsTo(Processo, { foreignKey: 'processoId', as: 'processo' });
+
+Usuario.hasMany(Sessao, { foreignKey: 'usuarioId', as: 'sessoes' });
+Sessao.belongsTo(Usuario, { foreignKey: 'usuarioId', as: 'usuario' });
+
+Usuario.hasMany(SenhaHistorico, {
+  foreignKey: 'usuarioId',
+  as: 'senhasHistorico',
+});
+SenhaHistorico.belongsTo(Usuario, { foreignKey: 'usuarioId', as: 'usuario' });
+
+Usuario.hasMany(MfaCodigoRecuperacao, {
+  foreignKey: 'usuarioId',
+  as: 'mfaCodigosRecuperacao',
+});
+MfaCodigoRecuperacao.belongsTo(Usuario, {
+  foreignKey: 'usuarioId',
+  as: 'usuario',
+});
+
 // Auditoria
 Auditoria.belongsTo(Usuario, { foreignKey: 'usuarioId', as: 'usuario' });
 
@@ -168,23 +213,33 @@ export const models = {
   ProcessoEtapa,
   Movimentacao,
   Auditoria,
+  VisaoSalva,
+  Delegacao,
+  Sessao,
+  SenhaHistorico,
+  MfaCodigoRecuperacao,
 };
 
 export {
   Auditoria,
   Cargo,
+  Delegacao,
   Etapa,
   Fase,
   Fluxo,
+  MfaCodigoRecuperacao,
   Movimentacao,
   Permission,
   Processo,
   ProcessoEtapa,
   Role,
   RolePermission,
+  SenhaHistorico,
+  Sessao,
   Setor,
   TipoProcesso,
   Usuario,
   UserRole,
   UserSectorAssignment,
+  VisaoSalva,
 };

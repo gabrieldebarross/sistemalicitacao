@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 
 import {
   AlertaErro,
@@ -49,7 +50,7 @@ export default function PerfilPage() {
   const dadosAlterados =
     nome.trim() !== perfil.nome || email.trim() !== perfil.email;
   const senhasConferem =
-    novaSenha.length >= 8 && novaSenha === confirmacao;
+    novaSenha.length >= 12 && novaSenha === confirmacao;
   const podeAlterarSenha =
     !salvandoSenha &&
     senhaAtual.length > 0 &&
@@ -178,7 +179,7 @@ export default function PerfilPage() {
               rotulo="Nova senha"
               htmlFor="perfil-nova-senha"
               obrigatorio
-              dica="Mínimo de 8 caracteres."
+              dica="Mínimo de 12 caracteres."
             >
               <Entrada
                 id="perfil-nova-senha"
@@ -216,6 +217,25 @@ export default function PerfilPage() {
           </form>
         </Cartao>
       </div>
+
+      <Cartao>
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-4">
+          <div>
+            <h2 className="font-semibold text-slate-900">
+              Segurança e sessões
+            </h2>
+            <p className="text-sm text-slate-500">
+              Consulte o status do MFA e revogue dispositivos com acesso ativo.
+            </p>
+          </div>
+          <Link
+            href="/perfil/seguranca"
+            className="text-sm font-medium text-sky-800 hover:underline"
+          >
+            Abrir segurança
+          </Link>
+        </div>
+      </Cartao>
     </div>
   );
 }

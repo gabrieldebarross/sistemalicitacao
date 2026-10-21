@@ -18,16 +18,21 @@ export interface Perfil {
   ativo: boolean;
   cargo: { id: number; nome: string } | null;
   senhaProvisoria: boolean;
+  mfaAtivo: boolean;
   roles: string[];
   permissoes: string[];
 }
 
+export type ResultadoEntrada =
+  | { mfaRequerido: false; perfil: Perfil }
+  | { mfaRequerido: true; configuracaoMfa: boolean };
+
 interface ContextoSessao {
   perfil: Perfil | null;
   carregando: boolean;
-  entrar: (email: string, senha: string) => Promise<Perfil>;
+  entrar: (email: string, senha: string) => Promise<ResultadoEntrada>;
   sair: () => Promise<void>;
-  recarregar: () => Promise<void>;
+  recarregar: () => Promise<Perfil | null>;
   temPermissao: (codigo: string) => boolean;
 }
 
@@ -39,12 +44,14 @@ export function SessaoProvider({
   const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [carregando, setCarregando] = useState(true);
 
-  const recarregar = useCallback(async () => {
+  const recarregar = useCallback(async (): Promise<Perfil | null> => {
     try {
       const resposta = await api.get<Perfil>('/auth/me');
       setPerfil(resposta.dados);
+      return resposta.dados;
     } catch {
       setPerfil(null);
+      return null;
     } finally {
       setCarregando(false);
     }
@@ -55,13 +62,19 @@ export function SessaoProvider({
   }, [recarregar]);
 
   const entrar = useCallback(
-    async (email: string, senha: string): Promise<Perfil> => {
-      const resposta = await api.post<{ perfil: Perfil }>('/auth/login', {
-        email,
-        senha,
-      });
+    async (email: string, senha: string): Promise<ResultadoEntrada> => {
+      const resposta = await api.post<
+        | { perfil: Perfil }
+        | { mfaRequerido: true; configuracaoMfa: boolean }
+      >('/auth/login', { email, senha });
+      if ('mfaRequerido' in resposta.dados) {
+        return {
+          mfaRequerido: true,
+          configuracaoMfa: resposta.dados.configuracaoMfa,
+        };
+      }
       setPerfil(resposta.dados.perfil);
-      return resposta.dados.perfil;
+      return { mfaRequerido: false, perfil: resposta.dados.perfil };
     },
     [],
   );

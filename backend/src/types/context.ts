@@ -3,5 +3,6 @@ export interface ContextoRequisicao {
   usuarioId: number | null;
   requestId: string;
   ip: string | null;
+  userAgent: string | null;
   permissoes: ReadonlySet<string>;
 }

@@ -4,12 +4,15 @@ import {
   ClipboardList,
   FileText,
   Gauge,
+  KeyRound,
   Layers,
+  ListTodo,
   LogOut,
   Menu,
   ScrollText,
   Tag,
   ShieldCheck,
+  UserCheck,
   UserRound,
   Users,
   X,
@@ -31,10 +34,22 @@ interface ItemMenu {
 const ITENS: ItemMenu[] = [
   { href: '/painel', rotulo: 'Painel', permissao: null, icone: Gauge },
   {
+    href: '/minhas-tarefas',
+    rotulo: 'Minhas tarefas',
+    permissao: 'processos.read',
+    icone: ListTodo,
+  },
+  {
     href: '/processos',
     rotulo: 'Processos',
     permissao: 'processos.read',
     icone: ClipboardList,
+  },
+  {
+    href: '/delegacoes',
+    rotulo: 'Delegações',
+    permissao: 'processos.assign',
+    icone: UserCheck,
   },
   { href: '/fluxos', rotulo: 'Fluxos', permissao: 'fluxos.read', icone: Layers },
   {
@@ -69,6 +84,12 @@ const ITENS: ItemMenu[] = [
     icone: ScrollText,
   },
   { href: '/perfil', rotulo: 'Meu perfil', permissao: null, icone: UserRound },
+  {
+    href: '/perfil/seguranca',
+    rotulo: 'Segurança',
+    permissao: null,
+    icone: KeyRound,
+  },
 ];
 
 export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) {

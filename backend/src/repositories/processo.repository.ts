@@ -43,7 +43,13 @@ export interface FiltroProcesso {
   tipoProcessoId?: number;
   setorAtualId?: number;
   responsavelAtualId?: number;
+  etapaAtualId?: number;
+  atrasado?: boolean;
+  criadoDe?: Date;
+  criadoAte?: Date;
   busca?: string;
+  ordenarPor?: 'numero' | 'nome' | 'created_at' | 'data_prevista' | 'status';
+  direcao?: 'asc' | 'desc';
 }
 
 const INCLUDE_DETALHE = [
@@ -102,7 +108,7 @@ export async function listar(
   offset: number,
   limit: number,
 ): Promise<{ itens: Processo[]; total: number }> {
-  let where: WhereOptions = {};
+  const where: WhereOptions = {};
   if (filtro.status !== undefined) {
     where.status = filtro.status;
   }
@@ -115,34 +121,110 @@ export async function listar(
   if (filtro.responsavelAtualId !== undefined) {
     where.responsavelAtualId = filtro.responsavelAtualId;
   }
+  if (filtro.etapaAtualId !== undefined) {
+    where.processoEtapaAtualId = filtro.etapaAtualId;
+  }
+  if (filtro.criadoDe || filtro.criadoAte) {
+    where.createdAt = {};
+    if (filtro.criadoDe) {
+      (where.createdAt as Record<symbol, Date>)[Op.gte] = filtro.criadoDe;
+    }
+    if (filtro.criadoAte) {
+      (where.createdAt as Record<symbol, Date>)[Op.lte] = filtro.criadoAte;
+    }
+  }
   if (filtro.busca) {
-    where = {
-      ...where,
+    Object.assign(where, {
       [Op.or]: [
         { nome: { [Op.like]: `%${filtro.busca}%` } },
         { numero: { [Op.like]: `%${filtro.busca}%` } },
         { objeto: { [Op.like]: `%${filtro.busca}%` } },
       ],
+    });
+  }
+
+  const etapaAtualInclude: Record<string, unknown> = {
+    model: ProcessoEtapa,
+    as: 'etapaAtual',
+    attributes: ['id', 'nome', 'status', 'dataPrevista'],
+    include: [
+      { model: Usuario, as: 'responsavel' },
+      { model: Setor, as: 'setor' },
+    ],
+  };
+  if (filtro.atrasado === true) {
+    etapaAtualInclude.required = true;
+    etapaAtualInclude.where = {
+      status: { [Op.in]: ['PENDENTE', 'EM_ANDAMENTO', 'BLOQUEADA'] },
+      dataPrevista: { [Op.lt]: new Date() },
     };
   }
+
+  const direcao = filtro.direcao ?? 'desc';
+  const ordenarPor = filtro.ordenarPor ?? 'created_at';
+  const order: unknown =
+    ordenarPor === 'data_prevista'
+      ? [
+          [{ model: ProcessoEtapa, as: 'etapaAtual' }, 'data_prevista', direcao],
+          ['id', direcao],
+        ]
+      : [
+          [ordenarPor === 'created_at' ? 'createdAt' : ordenarPor, direcao],
+          ['id', direcao],
+        ];
+
   const { rows, count } = await Processo.findAndCountAll({
     where,
     include: [
       { model: TipoProcesso, as: 'tipoProcesso' },
       { model: Setor, as: 'setorAtual' },
       { model: Usuario, as: 'responsavelAtual' },
-      {
-        model: ProcessoEtapa,
-        as: 'etapaAtual',
-        attributes: ['id', 'nome', 'status'],
-      },
+      etapaAtualInclude as never,
     ],
-    order: [['created_at', 'DESC']],
+    order: order as never,
     offset,
     limit,
     distinct: true,
   });
   return { itens: rows, total: count };
+}
+
+/** Processos com atribuição ativa a um usuário, para transferência. */
+export async function listarAtribuidosAoUsuario(
+  usuarioId: number,
+  transaction?: Transaction,
+): Promise<Processo[]> {
+  return Processo.findAll({
+    where: {
+      responsavelAtualId: usuarioId,
+      status: { [Op.notIn]: ['CONCLUIDO', 'ANULADO', 'REVOGADO'] },
+    },
+    ...(transaction ? { transaction, lock: transaction.LOCK.UPDATE } : {}),
+    order: [['id', 'ASC']],
+  });
+}
+
+export async function listarEtapasAtivasDoUsuario(
+  usuarioId: number,
+  transaction?: Transaction,
+): Promise<ProcessoEtapa[]> {
+  return ProcessoEtapa.findAll({
+    where: {
+      responsavelId: usuarioId,
+      status: { [Op.in]: ['PENDENTE', 'EM_ANDAMENTO', 'BLOQUEADA'] },
+    },
+    include: [
+      {
+        model: Processo,
+        as: 'processo',
+        required: true,
+        attributes: ['id', 'status'],
+        where: { status: { [Op.notIn]: ['CONCLUIDO', 'ANULADO', 'REVOGADO'] } },
+      },
+    ],
+    ...(transaction ? { transaction, lock: transaction.LOCK.UPDATE } : {}),
+    order: [['processo_id', 'ASC'], ['sequencia', 'ASC']],
+  });
 }
 
 export async function atualizar(

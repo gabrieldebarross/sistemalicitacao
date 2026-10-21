@@ -26,8 +26,28 @@ inválida; transição proibida; falha transacional; concorrência.
 regressão. Nunca afirmar que um teste passou sem executá-lo; se não for possível,
 informar a limitação.
 
+## Estado atual
+
+- **Backend:** Vitest + Supertest. A suíte cobre domínio de workflow
+  (transições, devolução, pulo, pendências obrigatórias/opcionais), RBAC,
+  normalização, validação Zod de processos e segurança, auditoria, duração de
+  tokens, utilitários de token, obrigatoriedade de MFA e middlewares de
+  autorização/senha provisória, além do endpoint de saúde.
+- **Execução:** `pnpm -C backend test` (12 arquivos, 83 testes na última
+  execução). `pnpm -C backend typecheck` e `pnpm -C backend lint` também são
+  obrigatórios.
+- **Frontend:** verificação de tipos (`pnpm -C frontend typecheck`), lint e build
+  de produção (`pnpm -C frontend build`). Testes automatizados de componentes e
+  E2E ainda não foram implementados.
+- **Migrações:** validadas em desenvolvimento com MySQL; rollback deve ser
+  exercitado antes de qualquer implantação.
+
 ## Pendências
 
-- Escolher ferramentas (Vitest/Jest, Supertest, Testing Library, Playwright).
+- Adicionar testes de integração de sessões/refresh concorrente, MFA e
+  desativação transacional contra banco de teste isolado.
+- Adicionar testes de API negativos para todas as rotas novas.
+- Introduzir testes de componentes e E2E (login, MFA, tarefas, delegações,
+  visões salvas, desativação com transferência).
 - Definir banco de teste e estratégia de fixtures.
 - Definir meta de cobertura para módulos críticos (domínio/authz).
