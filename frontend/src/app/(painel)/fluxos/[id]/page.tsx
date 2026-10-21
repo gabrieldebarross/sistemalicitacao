@@ -55,6 +55,9 @@ interface FormEtapa {
   descricao: string;
   requisitos: string;
   referenciaLegal: string;
+  condicional: boolean;
+  condicaoAplicabilidade: string;
+  permitePulo: boolean;
 }
 
 const FORM_ETAPA_VAZIO = (faseId: number): FormEtapa => ({
@@ -70,6 +73,9 @@ const FORM_ETAPA_VAZIO = (faseId: number): FormEtapa => ({
   descricao: '',
   requisitos: '',
   referenciaLegal: '',
+  condicional: false,
+  condicaoAplicabilidade: '',
+  permitePulo: false,
 });
 
 export default function FluxoDetalhePage() {
@@ -330,6 +336,10 @@ export default function FluxoDetalhePage() {
                       </p>
                       <p className="text-xs text-slate-500">
                         {etapa.obrigatoria ? 'Obrigatória' : 'Opcional'}
+                        {etapa.obrigatoria && etapa.permitePulo
+                          ? ' · permite pulo'
+                          : ''}
+                        {etapa.condicional ? ' · condicional' : ''}
                         {etapa.prazoGestaoDias
                           ? ` · prazo ${etapa.prazoGestaoDias} dias`
                           : ''}
@@ -345,6 +355,11 @@ export default function FluxoDetalhePage() {
                             }`
                           : ''}
                       </p>
+                      {etapa.condicional && etapa.condicaoAplicabilidade ? (
+                        <p className="text-xs text-slate-500">
+                          Condição: {etapa.condicaoAplicabilidade}
+                        </p>
+                      ) : null}
                       {etapa.descricao ? (
                         <p className="text-xs text-slate-500">
                           {etapa.descricao}
@@ -496,7 +511,12 @@ export default function FluxoDetalhePage() {
               Cancelar
             </Botao>
             <Botao
-              disabled={processando || !formEtapa?.nome.trim()}
+              disabled={
+                processando ||
+                !formEtapa?.nome.trim() ||
+                (formEtapa?.condicional === true &&
+                  !formEtapa.condicaoAplicabilidade.trim())
+              }
               onClick={() => {
                 if (!formEtapa) return;
                 const dados = {
@@ -523,6 +543,11 @@ export default function FluxoDetalhePage() {
                   descricao: formEtapa.descricao || undefined,
                   requisitos: formEtapa.requisitos || undefined,
                   referenciaLegal: formEtapa.referenciaLegal || undefined,
+                  condicional: formEtapa.condicional,
+                  condicaoAplicabilidade: formEtapa.condicional
+                    ? formEtapa.condicaoAplicabilidade || undefined
+                    : undefined,
+                  permitePulo: formEtapa.permitePulo,
                 };
                 return executar(() =>
                   formEtapa.id
@@ -559,7 +584,11 @@ export default function FluxoDetalhePage() {
                   }
                 />
               </Campo>
-              <Campo rotulo="Prazo (dias)" htmlFor="etapa-prazo">
+              <Campo
+                rotulo="Prazo (dias)"
+                htmlFor="etapa-prazo"
+                dica="Copiado para novos processos. Pode ser ajustado em cada processo."
+              >
                 <Entrada
                   id="etapa-prazo"
                   type="number"
@@ -651,6 +680,52 @@ export default function FluxoDetalhePage() {
               />
               Etapa obrigatória
             </label>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={formEtapa.permitePulo}
+                disabled={!formEtapa.obrigatoria}
+                onChange={(evento) =>
+                  setFormEtapa({
+                    ...formEtapa,
+                    permitePulo: evento.target.checked,
+                  })
+                }
+              />
+              Permite pulo com justificativa (etapa obrigatória)
+            </label>
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={formEtapa.condicional}
+                onChange={(evento) =>
+                  setFormEtapa({
+                    ...formEtapa,
+                    condicional: evento.target.checked,
+                  })
+                }
+              />
+              Etapa condicional
+            </label>
+            {formEtapa.condicional ? (
+              <Campo
+                rotulo="Condição de aplicabilidade"
+                htmlFor="etapa-condicao"
+                obrigatorio
+                dica="Descreva a condição que torna a etapa aplicável. Na criação do processo, a escolha é feita explicitamente."
+              >
+                <AreaTexto
+                  id="etapa-condicao"
+                  value={formEtapa.condicaoAplicabilidade}
+                  onChange={(evento) =>
+                    setFormEtapa({
+                      ...formEtapa,
+                      condicaoAplicabilidade: evento.target.value,
+                    })
+                  }
+                />
+              </Campo>
+            ) : null}
             <Campo rotulo="Descrição" htmlFor="etapa-descricao">
               <AreaTexto
                 id="etapa-descricao"
@@ -753,6 +828,9 @@ export default function FluxoDetalhePage() {
       descricao: etapa.descricao ?? '',
       requisitos: etapa.requisitos ?? '',
       referenciaLegal: etapa.referenciaLegal ?? '',
+      condicional: etapa.condicional,
+      condicaoAplicabilidade: etapa.condicaoAplicabilidade ?? '',
+      permitePulo: etapa.permitePulo,
     };
   }
 }

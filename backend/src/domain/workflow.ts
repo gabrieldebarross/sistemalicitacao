@@ -25,7 +25,7 @@ const TRANSICOES_ETAPA: Readonly<
   Record<ProcessoEtapaStatus, readonly ProcessoEtapaStatus[]>
 > = {
   PENDENTE: ['EM_ANDAMENTO', 'PULADA'],
-  EM_ANDAMENTO: ['CONCLUIDA', 'BLOQUEADA'],
+  EM_ANDAMENTO: ['CONCLUIDA', 'BLOQUEADA', 'PULADA'],
   BLOQUEADA: ['EM_ANDAMENTO'],
   CONCLUIDA: [],
   PULADA: [],
@@ -85,15 +85,54 @@ export function fluxoCompleto(etapas: readonly EtapaSequencial[]): boolean {
   );
 }
 
+export interface EtapaPulavel extends EtapaSequencial {
+  permitePulo: boolean;
+}
+
+/**
+ * Uma etapa só pode ser pulada se estiver pendente/em andamento e, quando
+ * obrigatória, se o fluxo permitir explicitamente o pulo. Etapas opcionais não
+ * exigem `permitePulo`; o motivo sempre é registrado pelo serviço.
+ */
+export function etapaPodeSerPulada(etapa: EtapaPulavel): boolean {
+  if (
+    etapa.status !== PROCESSO_ETAPA_STATUS.PENDENTE &&
+    etapa.status !== PROCESSO_ETAPA_STATUS.EM_ANDAMENTO
+  ) {
+    return false;
+  }
+  return !etapa.obrigatoria || etapa.permitePulo;
+}
+
+export interface PendenciasConclusao<T extends EtapaSequencial> {
+  obrigatorias: T[];
+  opcionais: T[];
+}
+
+/**
+ * Classifica as etapas ainda não finalizadas para a conclusão do processo.
+ * Obrigatórias bloqueiam a conclusão; opcionais podem ser puladas
+ * automaticamente com motivo registrado.
+ */
+export function classificarPendenciasConclusao<T extends EtapaSequencial>(
+  etapas: readonly T[],
+): PendenciasConclusao<T> {
+  const pendentes = etapas.filter((etapa) => !etapaConcluida(etapa.status));
+  return {
+    obrigatorias: pendentes.filter((etapa) => etapa.obrigatoria),
+    opcionais: pendentes.filter((etapa) => !etapa.obrigatoria),
+  };
+}
+
 export interface EtapaComRetorno extends EtapaSequencial {
   retornoParaEtapaId: number | null;
 }
 
 /**
  * Define o destino após concluir uma etapa. Se a etapa havia sido devolvida,
- * o fluxo refaz primeiro as etapas intermediárias reabertas e só então retorna
- * para a etapa que originou a devolução. Sem devolução pendente, segue a
- * próxima etapa não finalizada na ordem sequencial.
+ * retorna diretamente para a etapa que originou a devolução, sem refazer as
+ * etapas intermediárias que já estavam concluídas. Sem devolução pendente,
+ * segue a próxima etapa não finalizada na ordem sequencial.
  */
 export function proximaEtapaAposConclusao<T extends EtapaComRetorno>(
   etapas: readonly T[],
@@ -106,20 +145,13 @@ export function proximaEtapaAposConclusao<T extends EtapaComRetorno>(
           !etapaConcluida(etapa.status),
       )
     : undefined;
-
-  const proximaSequencial = [...etapas]
+  if (retorno) {
+    return retorno;
+  }
+  return [...etapas]
     .filter(
       (etapa) =>
         etapa.sequencia > atual.sequencia && !etapaConcluida(etapa.status),
     )
     .sort((a, b) => a.sequencia - b.sequencia)[0];
-
-  if (
-    retorno &&
-    (!proximaSequencial ||
-      proximaSequencial.sequencia >= retorno.sequencia)
-  ) {
-    return retorno;
-  }
-  return proximaSequencial;
 }

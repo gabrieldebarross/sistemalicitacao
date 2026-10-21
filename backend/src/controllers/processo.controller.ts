@@ -3,15 +3,19 @@ import type { Request, Response } from 'express';
 import {
   atribuirEtapaSchema,
   atribuirProcessoSchema,
+  atualizarPrazoEtapaSchema,
   atualizarProcessoSchema,
+  bloquearEtapaSchema,
   concluirEtapaSchema,
   criarProcessoSchema,
+  desbloquearEtapaSchema,
   devolverEtapaSchema,
   idParamSchema,
   justificativaSchema,
   listarProcessoQuerySchema,
   listarFluxosDisponiveisQuerySchema,
   processoEtapaParamSchema,
+  pularEtapaSchema,
 } from '../schemas/index.js';
 import * as processoService from '../services/processo.service.js';
 import { contextoDe } from '../utils/contexto.js';
@@ -117,6 +121,74 @@ export async function atribuirEtapa(
   responderOk(
     res,
     await processoService.atribuirEtapa(
+      id,
+      etapaId,
+      dados,
+      contextoDe(req, res),
+    ),
+  );
+}
+
+export async function atualizarPrazoEtapa(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { id, etapaId } = validar(processoEtapaParamSchema, req.params);
+  const dados = validar(atualizarPrazoEtapaSchema, req.body);
+  responderOk(
+    res,
+    await processoService.atualizarPrazoEtapa(
+      id,
+      etapaId,
+      dados,
+      contextoDe(req, res),
+    ),
+  );
+}
+
+export async function bloquearEtapa(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { id, etapaId } = validar(processoEtapaParamSchema, req.params);
+  const dados = validar(bloquearEtapaSchema, req.body);
+  responderOk(
+    res,
+    await processoService.bloquearEtapa(
+      id,
+      etapaId,
+      dados,
+      contextoDe(req, res),
+    ),
+  );
+}
+
+export async function desbloquearEtapa(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { id, etapaId } = validar(processoEtapaParamSchema, req.params);
+  const dados = validar(desbloquearEtapaSchema, req.body);
+  responderOk(
+    res,
+    await processoService.desbloquearEtapa(
+      id,
+      etapaId,
+      dados,
+      contextoDe(req, res),
+    ),
+  );
+}
+
+export async function pularEtapa(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { id, etapaId } = validar(processoEtapaParamSchema, req.params);
+  const dados = validar(pularEtapaSchema, req.body);
+  responderOk(
+    res,
+    await processoService.pularEtapa(
       id,
       etapaId,
       dados,

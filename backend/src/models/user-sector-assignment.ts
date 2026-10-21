@@ -5,9 +5,12 @@ import {
   type ForeignKey,
   type InferAttributes,
   type InferCreationAttributes,
+  type NonAttribute,
 } from 'sequelize';
 
 import { sequelize } from '../config/database.js';
+import type { Setor } from './setor.js';
+import type { Usuario } from './usuario.js';
 
 /** Vínculo de usuário a setor, com indicação de setor principal. */
 export class UserSectorAssignment extends Model<
@@ -20,6 +23,9 @@ export class UserSectorAssignment extends Model<
   declare principal: CreationOptional<boolean>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
+
+  declare usuario?: NonAttribute<Usuario>;
+  declare setor?: NonAttribute<Setor>;
 }
 
 UserSectorAssignment.init(

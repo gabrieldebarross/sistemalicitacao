@@ -33,6 +33,7 @@ export class Etapa extends Model<
   declare referenciaLegal: CreationOptional<string | null>;
   declare condicional: CreationOptional<boolean>;
   declare condicaoAplicabilidade: CreationOptional<string | null>;
+  declare permitePulo: CreationOptional<boolean>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 
@@ -70,6 +71,11 @@ Etapa.init(
       defaultValue: false,
     },
     condicaoAplicabilidade: { type: DataTypes.TEXT, allowNull: true },
+    permitePulo: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
   },

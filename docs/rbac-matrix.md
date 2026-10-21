@@ -69,10 +69,22 @@ Regras de comportamento ligadas a essas permissões:
   usuário escolhe explicitamente qual será usado. Havendo apenas um, ele é
   pré-selecionado.
 - `processos.assign` permite atribuir responsável ao processo e, isoladamente,
-  a cada etapa ainda não concluída/pulada.
+  a cada etapa ainda não concluída/pulada. As atribuições de processo e de etapa
+  são independentes: alterar uma não modifica a outra.
+- `processos.block`, `processos.unblock` e `processos.skip` controlam a etapa
+  atual: bloqueio/desbloqueio exigem motivo/justificativa; o pulo exige
+  justificativa. Etapas obrigatórias só podem ser puladas quando o fluxo marca
+  `permitePulo`; etapas opcionais podem ser puladas com justificativa. Todas as
+  ações geram movimentação e auditoria.
 - A devolução não está disponível na primeira etapa. Ao concluir novamente a
-  etapa devolvida, o processo retorna automaticamente para a etapa que fez a
-  devolução.
+  etapa devolvida, o processo retorna diretamente para a etapa que fez a
+  devolução, sem refazer as etapas intermediárias. A interface permite escolher
+  qualquer etapa anterior já concluída.
+- `usuarios.update` permite definir os setores do usuário e seu setor principal
+  (`PUT /api/usuarios/:id/setores`). O setor principal é sugerido ao atribuir o
+  usuário a uma etapa.
+- `processos.update` permite ajustar o prazo interno de uma etapa não concluída
+  no processo específico, sem alterar o fluxo de origem.
 - O próprio usuário pode alterar nome, e-mail e senha em **Meu perfil**. Quem
   possui `usuarios.update` também pode redefinir a senha de outro usuário; nesse
   caso a troca é exigida no próximo acesso.
@@ -88,20 +100,23 @@ idempotente; não altera o papel `Administrador`; cargos sem atuação em
 contratações ficam sem permissão — negar por padrão). É uma **proposta técnica**
 de menor privilégio e separação de funções, **editável** pela administração.
 As permissões novas são garantidas pelo seeder
-`20260101000013-seed-permissoes-funcionalidades.cjs`.
+`20260101000013-seed-permissoes-funcionalidades.cjs`. As permissões de controle
+da etapa (`processos.block`, `processos.unblock`, `processos.skip`) são
+garantidas pelo seeder `20260101000015-seed-permissoes-workflow.cjs`.
 
 Legenda: `R`=ler, `C`=criar, `U`=editar, `A`=concluir etapa, `Cc`=concluir
 processo, `D`=devolver, `G`=atribuir, `S`=suspender, `Rm`=retomar,
-`X`=anular/revogar; fluxos: `P`=publicar, `Cl`=clonar, `Ar`=arquivar,
+`X`=anular/revogar, `B`=bloquear etapa, `Ub`=desbloquear etapa, `Sk`=pular
+etapa; fluxos: `P`=publicar, `Cl`=clonar, `Ar`=arquivar,
 `Ga`=atribuir responsável; `R` em relatórios = painel/indicadores.
 
 | Papel (cargo) | processos | fluxos | relatórios | admin |
 |---|---|---|---|---|
 | Administrador | todas | todas | R | usuários, papéis, permissões, auditoria, cadastros |
-| Diretor Administrativo Financeiro | R C U A Cc D G S Rm X | R C U P Cl Ar Ga | R | usuarios.read, roles.read, audit.read; setores/cargos/tipos.manage |
-| Diretor Serviços Saúde | R C U A Cc D G S Rm | R | R | — |
-| Coordenador | R C U A Cc D G S Rm | R Ga | R | — |
-| Supervisor(a) Administrativo | R C U A Cc D G | R | R | — |
+| Diretor Administrativo Financeiro | R C U A Cc D G S Rm X B Ub Sk | R C U P Cl Ar Ga | R | usuarios.read, roles.read, audit.read; setores/cargos/tipos.manage |
+| Diretor Serviços Saúde | R C U A Cc D G S Rm B Ub Sk | R | R | — |
+| Coordenador | R C U A Cc D G S Rm B Ub Sk | R Ga | R | — |
+| Supervisor(a) Administrativo | R C U A Cc D G B Ub Sk | R | R | — |
 | Agente Administrativo | R C U A Cc D G | R | — | — |
 | Assistente Administrativo | R U A D | R | — | — |
 | Advogado | R A D | R | R | — |
@@ -115,7 +130,8 @@ Racional resumido:
 - **Apoio** (Assistente): tramita etapas existentes, mas não conclui o processo.
 - **Supervisão** (Coordenador/Diretores): acrescentam suspender, retomar e
   concluir o processo; anular (`processos.cancel`) é reservado à Direção
-  administrativo-financeira (função mais sensível).
+  administrativo-financeira (função mais sensível). Bloqueio, desbloqueio e pulo
+  de etapa também ficam sob supervisão, por afetarem a trilha obrigatória.
 - **Jurídico** (Advogado/Assessor): analisam e devolvem, não criam nem anulam.
 - **Contábil** (Contador): consulta e painel.
 

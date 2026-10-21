@@ -12,6 +12,7 @@ import * as processoRepo from '../repositories/processo.repository.js';
 import * as tipoRepo from '../repositories/tipo-processo.repository.js';
 import * as usuarioRepo from '../repositories/usuario.repository.js';
 import type { ContextoRequisicao } from '../types/context.js';
+import { diffAuditoria } from '../utils/audit-diff.js';
 import { montarPaginado, type ResultadoPaginado } from '../utils/http.js';
 import { resolverPaginacao } from '../utils/pagination.js';
 import * as auditoria from './auditoria.service.js';
@@ -30,6 +31,7 @@ export interface EtapaDTO {
   referenciaLegal: string | null;
   condicional: boolean;
   condicaoAplicabilidade: string | null;
+  permitePulo: boolean;
 }
 
 export interface FaseDTO {
@@ -77,6 +79,7 @@ function etapaToDTO(etapa: Etapa): EtapaDTO {
     referenciaLegal: etapa.referenciaLegal,
     condicional: etapa.condicional,
     condicaoAplicabilidade: etapa.condicaoAplicabilidade,
+    permitePulo: etapa.permitePulo,
   };
 }
 
@@ -205,6 +208,10 @@ export async function atualizar(
     throw new NotFoundError('Fluxo não encontrado.');
   }
   garantirEditavel(fluxo);
+  const antes = {
+    nome: fluxo.nome,
+    descricao: fluxo.descricao,
+  };
   if (input.nome !== undefined) {
     fluxo.nome = normalizarNome(input.nome);
   }
@@ -212,10 +219,16 @@ export async function atualizar(
     fluxo.descricao = input.descricao;
   }
   await fluxo.save();
+  const alteracoes = diffAuditoria(
+    antes,
+    { nome: fluxo.nome, descricao: fluxo.descricao },
+    ['nome', 'descricao'],
+  );
   await auditoria.registrar(contexto, {
     acao: 'ALTERAR',
     recurso: 'fluxo',
     recursoId: fluxo.id,
+    metadados: { alteracoes },
   });
   return detalhar(fluxo.id);
 }
@@ -336,6 +349,11 @@ export async function atualizarFase(
     throw new NotFoundError('Fase não encontrada.');
   }
   garantirEditavel(fase.fluxo);
+  const antes = {
+    nome: fase.nome,
+    ordem: fase.ordem,
+    descricao: fase.descricao,
+  };
   if (input.nome !== undefined) {
     fase.nome = normalizarNome(input.nome);
   }
@@ -346,10 +364,16 @@ export async function atualizarFase(
     fase.descricao = input.descricao;
   }
   await fase.save();
+  const alteracoes = diffAuditoria(
+    antes,
+    { nome: fase.nome, ordem: fase.ordem, descricao: fase.descricao },
+    ['nome', 'ordem', 'descricao'],
+  );
   await auditoria.registrar(contexto, {
     acao: 'ALTERAR_FASE',
     recurso: 'fase',
     recursoId: faseId,
+    metadados: { alteracoes },
   });
   return detalhar(fase.fluxoId);
 }
@@ -386,6 +410,7 @@ export interface DadosEtapa {
   referenciaLegal?: string;
   condicional?: boolean;
   condicaoAplicabilidade?: string;
+  permitePulo?: boolean;
 }
 
 export async function criarEtapa(
@@ -399,6 +424,15 @@ export async function criarEtapa(
   }
   garantirEditavel(fase.fluxo);
   await validarResponsavelUsuario(input.responsavelUsuarioId);
+  const condicional = input.condicional ?? false;
+  const condicaoAplicabilidade = condicional
+    ? input.condicaoAplicabilidade?.trim() || null
+    : null;
+  if (condicional && !condicaoAplicabilidade) {
+    throw new ValidationError(
+      'Etapas condicionais exigem a descrição da condição de aplicabilidade.',
+    );
+  }
   const ordem = input.ordem ?? (await fluxoRepo.proximaOrdemEtapa(faseId));
   await fluxoRepo.criarEtapa({
     faseId,
@@ -412,13 +446,18 @@ export async function criarEtapa(
     descricao: input.descricao?.trim() || null,
     requisitos: input.requisitos?.trim() || null,
     referenciaLegal: input.referenciaLegal?.trim() || null,
-    condicional: input.condicional ?? false,
-    condicaoAplicabilidade: input.condicaoAplicabilidade?.trim() || null,
+    condicional,
+    condicaoAplicabilidade,
+    permitePulo: input.permitePulo ?? false,
   });
   await auditoria.registrar(contexto, {
     acao: 'CRIAR_ETAPA',
     recurso: 'fase',
     recursoId: faseId,
+    metadados: {
+      condicional,
+      permitePulo: input.permitePulo ?? false,
+    },
   });
   return detalhar(fase.fluxoId);
 }
@@ -433,6 +472,21 @@ export async function atualizarEtapa(
     throw new NotFoundError('Etapa não encontrada.');
   }
   garantirEditavel(etapa.fase.fluxo);
+  const antes = {
+    nome: etapa.nome,
+    ordem: etapa.ordem,
+    obrigatoria: etapa.obrigatoria,
+    prazoGestaoDias: etapa.prazoGestaoDias,
+    responsavelSetorId: etapa.responsavelSetorId,
+    responsavelCargoId: etapa.responsavelCargoId,
+    responsavelUsuarioId: etapa.responsavelUsuarioId,
+    descricao: etapa.descricao,
+    requisitos: etapa.requisitos,
+    referenciaLegal: etapa.referenciaLegal,
+    condicional: etapa.condicional,
+    condicaoAplicabilidade: etapa.condicaoAplicabilidade,
+    permitePulo: etapa.permitePulo,
+  };
   if (input.nome !== undefined) {
     etapa.nome = normalizarNome(input.nome);
   }
@@ -468,13 +522,59 @@ export async function atualizarEtapa(
     etapa.condicional = input.condicional;
   }
   if (input.condicaoAplicabilidade !== undefined) {
-    etapa.condicaoAplicabilidade = input.condicaoAplicabilidade;
+    etapa.condicaoAplicabilidade =
+      input.condicaoAplicabilidade.trim() || null;
+  }
+  if (input.permitePulo !== undefined) {
+    etapa.permitePulo = input.permitePulo;
+  }
+  if (etapa.condicional && !etapa.condicaoAplicabilidade) {
+    throw new ValidationError(
+      'Etapas condicionais exigem a descrição da condição de aplicabilidade.',
+    );
+  }
+  if (!etapa.condicional) {
+    etapa.condicaoAplicabilidade = null;
   }
   await etapa.save();
+  const alteracoes = diffAuditoria(
+    antes,
+    {
+      nome: etapa.nome,
+      ordem: etapa.ordem,
+      obrigatoria: etapa.obrigatoria,
+      prazoGestaoDias: etapa.prazoGestaoDias,
+      responsavelSetorId: etapa.responsavelSetorId,
+      responsavelCargoId: etapa.responsavelCargoId,
+      responsavelUsuarioId: etapa.responsavelUsuarioId,
+      descricao: etapa.descricao,
+      requisitos: etapa.requisitos,
+      referenciaLegal: etapa.referenciaLegal,
+      condicional: etapa.condicional,
+      condicaoAplicabilidade: etapa.condicaoAplicabilidade,
+      permitePulo: etapa.permitePulo,
+    },
+    [
+      'nome',
+      'ordem',
+      'obrigatoria',
+      'prazoGestaoDias',
+      'responsavelSetorId',
+      'responsavelCargoId',
+      'responsavelUsuarioId',
+      'descricao',
+      'requisitos',
+      'referenciaLegal',
+      'condicional',
+      'condicaoAplicabilidade',
+      'permitePulo',
+    ],
+  );
   await auditoria.registrar(contexto, {
     acao: 'ALTERAR_ETAPA',
     recurso: 'etapa',
     recursoId: etapaId,
+    metadados: { alteracoes },
   });
   return detalhar(etapa.fase.fluxoId);
 }

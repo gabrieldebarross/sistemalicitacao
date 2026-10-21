@@ -31,6 +31,11 @@ export interface ProcessoEtapa {
   dataConclusao: string | null;
   motivoBloqueio: string | null;
   retornoParaEtapaId: number | null;
+  condicional: boolean;
+  condicaoAplicabilidade: string | null;
+  permitePulo: boolean;
+  motivoPulo: string | null;
+  puladaEm: string | null;
   responsavel: Referencia | null;
   setor: Referencia | null;
 }
@@ -66,6 +71,7 @@ export interface EtapaFluxo {
   referenciaLegal: string | null;
   condicional: boolean;
   condicaoAplicabilidade: string | null;
+  permitePulo: boolean;
 }
 
 export interface FaseFluxo {
@@ -99,10 +105,19 @@ export interface FluxoResumo {
 }
 
 /** Fluxo publicado disponível para escolha na criação de processo. */
+export interface EtapaCondicionalDisponivel {
+  id: number;
+  nome: string;
+  sequencia: number;
+  faseNome: string | null;
+  condicaoAplicabilidade: string | null;
+}
+
 export interface FluxoDisponivel {
   id: number;
   nome: string;
   versao: number;
+  etapasCondicionais: EtapaCondicionalDisponivel[];
 }
 
 export interface Cargo {
@@ -126,6 +141,13 @@ export interface TipoProcesso {
   ativo: boolean;
 }
 
+export interface SetorUsuario {
+  id: number;
+  nome: string;
+  sigla: string | null;
+  principal: boolean;
+}
+
 export interface Usuario {
   id: number;
   nome: string;
@@ -133,6 +155,7 @@ export interface Usuario {
   ativo: boolean;
   cargo: Referencia | null;
   roles: string[];
+  setores: SetorUsuario[];
 }
 
 /** Lista enxuta usada para selecionar responsáveis em processos e etapas. */
@@ -140,6 +163,8 @@ export interface UsuarioAtribuivel {
   id: number;
   nome: string;
   cargo: string | null;
+  setores: SetorUsuario[];
+  setorPrincipalId: number | null;
 }
 
 export interface Permissao {

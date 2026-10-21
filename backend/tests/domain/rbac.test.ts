@@ -47,4 +47,11 @@ describe('política RBAC', () => {
       possuiAlgumaPermissao(usuario, [PERMISSIONS.PROCESSOS_READ]),
     ).toBe(false);
   });
+
+  it('nega controles de etapa sem permissão específica', () => {
+    const usuario = sujeito([PERMISSIONS.PROCESSOS_ADVANCE]);
+    expect(possuiPermissao(usuario, PERMISSIONS.PROCESSOS_BLOCK)).toBe(false);
+    expect(possuiPermissao(usuario, PERMISSIONS.PROCESSOS_UNBLOCK)).toBe(false);
+    expect(possuiPermissao(usuario, PERMISSIONS.PROCESSOS_SKIP)).toBe(false);
+  });
 });

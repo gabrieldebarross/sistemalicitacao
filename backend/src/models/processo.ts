@@ -42,6 +42,7 @@ export class Processo extends Model<
   declare fluxo?: NonAttribute<Fluxo>;
   declare setorAtual?: NonAttribute<Setor>;
   declare responsavelAtual?: NonAttribute<Usuario>;
+  declare etapaAtual?: NonAttribute<ProcessoEtapa | null>;
   declare etapas?: NonAttribute<ProcessoEtapa[]>;
 }
 

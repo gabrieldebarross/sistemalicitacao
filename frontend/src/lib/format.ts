@@ -59,4 +59,7 @@ export const ROTULOS_MOVIMENTACAO: Record<string, string> = {
   SUSPENSAO: 'Suspensão',
   RETOMADA: 'Retomada',
   OBSERVACAO: 'Observação',
+  BLOQUEIO: 'Bloqueio de etapa',
+  DESBLOQUEIO: 'Desbloqueio de etapa',
+  PULO_ETAPA: 'Pulo de etapa',
 };

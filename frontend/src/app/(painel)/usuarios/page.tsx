@@ -18,7 +18,7 @@ import {
 import { api, mensagemDeErro, TAMANHO_PAGINA_MAX, type Paginacao } from '@/lib/api';
 import { agruparPermissoes } from '@/lib/rotulos';
 import { useSessao } from '@/lib/session';
-import type { Cargo, Papel, Usuario } from '@/lib/tipos';
+import type { Cargo, Papel, Setor, Usuario } from '@/lib/tipos';
 
 interface Formulario {
   id: number | null;
@@ -47,6 +47,7 @@ export default function UsuariosPage() {
 
   const [itens, setItens] = useState<Usuario[]>([]);
   const [cargos, setCargos] = useState<Cargo[]>([]);
+  const [setores, setSetores] = useState<Setor[]>([]);
   const [papels, setPapels] = useState<Papel[]>([]);
   const [paginacao, setPaginacao] = useState<Paginacao | null>(null);
   const [busca, setBusca] = useState('');
@@ -57,6 +58,10 @@ export default function UsuariosPage() {
   const [salvando, setSalvando] = useState(false);
   const [rolesUsuario, setRolesUsuario] = useState<Usuario | null>(null);
   const [rolesSelecionados, setRolesSelecionados] = useState<number[]>([]);
+  const [setoresUsuario, setSetoresUsuario] = useState<Usuario | null>(null);
+  const [setoresSelecionados, setSetoresSelecionados] = useState<number[]>([]);
+  const [setorPrincipalId, setSetorPrincipalId] = useState('');
+  const [salvandoSetores, setSalvandoSetores] = useState(false);
   const [desativando, setDesativando] = useState<Usuario | null>(null);
   const [processandoDesativar, setProcessandoDesativar] = useState(false);
 
@@ -85,13 +90,19 @@ export default function UsuariosPage() {
       .get<Cargo[]>(`/cargos?tamanhoPagina=${TAMANHO_PAGINA_MAX}`)
       .then((r) => setCargos(r.dados))
       .catch(() => setCargos([]));
+    if (podeEditar) {
+      api
+        .get<Setor[]>(`/setores?tamanhoPagina=${TAMANHO_PAGINA_MAX}`)
+        .then((r) => setSetores(r.dados))
+        .catch(() => setSetores([]));
+    }
     if (podeGerenciarRoles) {
       api
         .get<Papel[]>('/roles')
         .then((r) => setPapels(r.dados))
         .catch(() => setPapels([]));
     }
-  }, [podeGerenciarRoles]);
+  }, [podeEditar, podeGerenciarRoles]);
 
   function abrirNovo() {
     setForm({ ...VAZIO });
@@ -179,6 +190,54 @@ export default function UsuariosPage() {
     setRolesUsuario(usuario);
   }
 
+  function abrirSetores(usuario: Usuario) {
+    const ids = usuario.setores.map((setor) => setor.id);
+    setSetoresSelecionados(ids);
+    setSetorPrincipalId(
+      usuario.setores.find((setor) => setor.principal)
+        ? String(usuario.setores.find((setor) => setor.principal)?.id)
+        : ids[0]
+          ? String(ids[0])
+          : '',
+    );
+    setSetoresUsuario(usuario);
+  }
+
+  function alternarSetor(setorId: number, marcado: boolean) {
+    setSetoresSelecionados((atual) => {
+      const proximo = marcado
+        ? [...atual, setorId]
+        : atual.filter((id) => id !== setorId);
+      if (!marcado && setorPrincipalId === String(setorId)) {
+        setSetorPrincipalId(proximo[0] ? String(proximo[0]) : '');
+      }
+      if (marcado && !setorPrincipalId) {
+        setSetorPrincipalId(String(setorId));
+      }
+      return proximo;
+    });
+  }
+
+  async function salvarSetores() {
+    if (!setoresUsuario) return;
+    setSalvandoSetores(true);
+    setErro('');
+    try {
+      await api.put(`/usuarios/${setoresUsuario.id}/setores`, {
+        setorIds: setoresSelecionados,
+        setorPrincipalId: setorPrincipalId
+          ? Number(setorPrincipalId)
+          : null,
+      });
+      setSetoresUsuario(null);
+      await carregar();
+    } catch (falha) {
+      setErro(mensagemDeErro(falha));
+    } finally {
+      setSalvandoSetores(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -226,6 +285,7 @@ export default function UsuariosPage() {
                   <th className="px-4 py-2">Nome</th>
                   <th className="px-4 py-2">E-mail</th>
                   <th className="px-4 py-2">Cargo</th>
+                  <th className="px-4 py-2">Setores</th>
                   <th className="px-4 py-2">Papéis</th>
                   <th className="px-4 py-2">Situação</th>
                   <th className="px-4 py-2" />
@@ -242,6 +302,16 @@ export default function UsuariosPage() {
                       {usuario.cargo?.nome ?? '—'}
                     </td>
                     <td className="px-4 py-3 text-slate-600">
+                      {usuario.setores.length > 0
+                        ? usuario.setores
+                            .map(
+                              (setor) =>
+                                `${setor.nome}${setor.principal ? ' (principal)' : ''}`,
+                            )
+                            .join(', ')
+                        : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">
                       {usuario.roles.length > 0 ? usuario.roles.join(', ') : '—'}
                     </td>
                     <td className="px-4 py-3">
@@ -251,6 +321,14 @@ export default function UsuariosPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
+                        {podeEditar ? (
+                          <Botao
+                            variante="secundario"
+                            onClick={() => abrirSetores(usuario)}
+                          >
+                            Setores
+                          </Botao>
+                        ) : null}
                         {podeGerenciarRoles ? (
                           <Botao
                             variante="secundario"
@@ -496,6 +574,81 @@ export default function UsuariosPage() {
                       </span>
                     </span>
                   </label>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Modal>
+
+      <Modal
+        aberto={setoresUsuario !== null}
+        titulo={`Setores de ${setoresUsuario?.nome ?? ''}`}
+        aoFechar={() => setSetoresUsuario(null)}
+        rodape={
+          <>
+            <Botao
+              variante="secundario"
+              onClick={() => setSetoresUsuario(null)}
+            >
+              Cancelar
+            </Botao>
+            <Botao disabled={salvandoSetores} onClick={salvarSetores}>
+              {salvandoSetores ? 'Salvando…' : 'Salvar'}
+            </Botao>
+          </>
+        }
+      >
+        <p className="mb-3 text-sm text-slate-500">
+          Selecione os setores do usuário e indique o setor principal. O setor
+          principal é sugerido automaticamente ao atribuir o usuário a uma
+          etapa do processo.
+        </p>
+        {setores.length === 0 ? (
+          <p className="text-sm text-slate-500">Nenhum setor cadastrado.</p>
+        ) : (
+          <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto pr-1">
+            {setores.map((setor) => {
+              const marcado = setoresSelecionados.includes(setor.id);
+              const jaVinculado = setoresUsuario?.setores.some(
+                (vinculo) => vinculo.id === setor.id,
+              );
+              const disponivel = setor.ativo || jaVinculado;
+              return (
+                <li
+                  key={setor.id}
+                  className="rounded-md border border-slate-200 p-3"
+                >
+                  <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex flex-1 items-center gap-2">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300"
+                        checked={marcado}
+                        disabled={!disponivel}
+                        onChange={(evento) =>
+                          alternarSetor(setor.id, evento.target.checked)
+                        }
+                      />
+                      <span className="text-sm font-medium text-slate-800">
+                        {setor.nome}
+                      </span>
+                      {!setor.ativo ? (
+                        <Etiqueta tom="neutro">Inativo</Etiqueta>
+                      ) : null}
+                    </label>
+                    <label className="flex items-center gap-2 text-xs text-slate-600">
+                      <input
+                        type="radio"
+                        name="setor-principal"
+                        className="h-4 w-4 border-slate-300"
+                        checked={setorPrincipalId === String(setor.id)}
+                        disabled={!marcado}
+                        onChange={() => setSetorPrincipalId(String(setor.id))}
+                      />
+                      Principal
+                    </label>
+                  </div>
                 </li>
               );
             })}

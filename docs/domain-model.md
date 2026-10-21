@@ -56,11 +56,16 @@ Detalhes em `backend/database/migrations/`.
 
 - **Cargos:** apenas o nome (normalizado) + `nome_original` para rastreabilidade;
   os campos numéricos e demais atributos de origem foram removidos (ADR 0004).
+- **Vínculo usuário-setor:** `user_sector_assignments` permite múltiplos setores
+  por usuário e marca no máximo um como principal. A atribuição de etapa usa o
+  setor principal como sugestão, mas o setor da etapa continua explícito e
+  auditável.
 - **Versionamento de fluxo:** o número da versão fica na própria linha de
   `fluxos` (`versao`), com unicidade em `(tipo_processo_id, nome, versao)`. O
   processo guarda a referência da versão usada e a instância de etapa copia
   (snapshot) os dados relevantes, preservando o histórico mesmo que o fluxo
-  seja alterado.
+  seja alterado. O snapshot de `processo_etapas` inclui `condicional`,
+  `condicao_aplicabilidade`, `permite_pulo`, `motivo_pulo` e `pulada_em`.
 - **`movimentacoes` e `auditoria`:** imutáveis (apenas `created_at`).
 - **Permissões:** nenhuma concedida por padrão; a matriz papel × permissão deve
   ser definida pela administração (ADR 0002).

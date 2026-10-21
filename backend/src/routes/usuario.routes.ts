@@ -43,6 +43,11 @@ usuarioRouter.put(
   exigirPermissao(PERMISSIONS.ROLES_MANAGE),
   controller.definirRoles,
 );
+usuarioRouter.put(
+  '/:id/setores',
+  exigirPermissao(PERMISSIONS.USUARIOS_UPDATE),
+  controller.definirSetores,
+);
 usuarioRouter.post(
   '/:id/desativar',
   exigirPermissao(PERMISSIONS.USUARIOS_DEACTIVATE),

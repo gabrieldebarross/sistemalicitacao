@@ -24,6 +24,9 @@
 - **Rate limiting:** global + específico; limites de payload/upload.
 - **Erros:** formato padrão; sem stack trace/SQL/paths em produção.
 - **Logs:** estruturados, com correlação, sem dados sensíveis.
+- **Auditoria:** registra usuário, ação, recurso, resultado, justificativa e
+  correlação. Diffs usam allowlist de campos, mascaram senhas/tokens/segredos e
+  truncam textos longos. A auditoria não é editável pela interface comum.
 - **Dependências:** verificação de vulnerabilidades no CI.
 - **Segredos:** `.env` fora do Git; `.env.example` só com placeholders.
 

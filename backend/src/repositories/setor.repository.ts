@@ -28,6 +28,13 @@ export async function buscarPorNome(nome: string): Promise<Setor | null> {
   return Setor.findOne({ where: { nome } });
 }
 
+export async function buscarPorIds(ids: readonly number[]): Promise<Setor[]> {
+  if (ids.length === 0) {
+    return [];
+  }
+  return Setor.findAll({ where: { id: { [Op.in]: [...ids] } } });
+}
+
 export async function listar(
   filtro: FiltroSetor,
   offset: number,

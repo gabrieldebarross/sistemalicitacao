@@ -34,6 +34,7 @@ export interface CriarEtapa {
   referenciaLegal: string | null;
   condicional?: boolean;
   condicaoAplicabilidade: string | null;
+  permitePulo?: boolean;
 }
 
 export interface FiltroFluxo {
@@ -76,6 +77,32 @@ export async function buscarPublicado(
   return Fluxo.findOne({
     where: { tipoProcessoId, situacao: 'PUBLICADO' },
     order: [['versao', 'DESC']],
+  });
+}
+
+/** Fluxos publicados com fases/etapas, usados na criação de processo. */
+export async function listarPublicadosComEtapas(
+  tipoProcessoId: number,
+): Promise<Fluxo[]> {
+  return Fluxo.findAll({
+    where: { tipoProcessoId, situacao: 'PUBLICADO' },
+    include: [
+      {
+        model: Fase,
+        as: 'fases',
+        include: [{ model: Etapa, as: 'etapas' }],
+      },
+    ],
+    order: [
+      ['versao', 'DESC'],
+      [{ model: Fase, as: 'fases' }, 'ordem', 'ASC'],
+      [
+        { model: Fase, as: 'fases' },
+        { model: Etapa, as: 'etapas' },
+        'ordem',
+        'ASC',
+      ],
+    ],
   });
 }
 
@@ -291,6 +318,7 @@ export async function clonar(
             referenciaLegal: etapa.referenciaLegal,
             condicional: etapa.condicional,
             condicaoAplicabilidade: etapa.condicaoAplicabilidade,
+            permitePulo: etapa.permitePulo,
           },
           { transaction },
         );

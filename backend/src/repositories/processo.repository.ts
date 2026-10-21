@@ -31,6 +31,11 @@ export interface CriarProcessoEtapa {
   responsavelId: number | null;
   setorId: number | null;
   status?: ProcessoEtapaStatus;
+  condicional?: boolean;
+  condicaoAplicabilidade?: string | null;
+  permitePulo?: boolean;
+  motivoPulo?: string | null;
+  puladaEm?: Date | null;
 }
 
 export interface FiltroProcesso {
@@ -67,6 +72,22 @@ export async function buscarPorId(id: number): Promise<Processo | null> {
   return Processo.findByPk(id, {
     include: INCLUDE_DETALHE,
     order: [[{ model: ProcessoEtapa, as: 'etapas' }, 'sequencia', 'ASC']],
+  });
+}
+
+/**
+ * Carrega o processo com bloqueio de escrita para operações de transição que
+ * precisam validar e alterar processo + etapas na mesma transação.
+ */
+export async function buscarPorIdComLock(
+  id: number,
+  transaction: Transaction,
+): Promise<Processo | null> {
+  return Processo.findByPk(id, {
+    include: INCLUDE_DETALHE,
+    order: [[{ model: ProcessoEtapa, as: 'etapas' }, 'sequencia', 'ASC']],
+    transaction,
+    lock: transaction.LOCK.UPDATE,
   });
 }
 
@@ -110,6 +131,11 @@ export async function listar(
       { model: TipoProcesso, as: 'tipoProcesso' },
       { model: Setor, as: 'setorAtual' },
       { model: Usuario, as: 'responsavelAtual' },
+      {
+        model: ProcessoEtapa,
+        as: 'etapaAtual',
+        attributes: ['id', 'nome', 'status'],
+      },
     ],
     order: [['created_at', 'DESC']],
     offset,
@@ -158,10 +184,13 @@ export async function atualizarEtapa(
     dataPrevista?: Date | null;
     dataConclusao?: Date | null;
     motivoBloqueio?: string | null;
+    motivoPulo?: string | null;
+    puladaEm?: Date | null;
     retornoParaEtapaId?: number | null;
   },
+  transaction?: Transaction,
 ): Promise<ProcessoEtapa> {
-  return etapa.update(dados);
+  return etapa.update(dados, transaction ? { transaction } : {});
 }
 
 export async function criarEtapasEmLote(

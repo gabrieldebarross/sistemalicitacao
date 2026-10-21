@@ -180,7 +180,12 @@ export default function ProcessosPage() {
                       </Etiqueta>
                     </td>
                     <td className="px-4 py-3 text-slate-600">
-                      {processo.etapaAtual?.nome ?? '—'}
+                      {processo.etapaAtual?.nome ??
+                        (processo.status === 'EM_ANDAMENTO'
+                          ? 'Aguardando conclusão do processo'
+                          : processo.status === 'RASCUNHO'
+                            ? 'Não iniciado'
+                            : '—')}
                     </td>
                     <td className="px-4 py-3 text-slate-600">
                       {formatarData(processo.criadoEm)}

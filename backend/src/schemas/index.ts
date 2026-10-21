@@ -114,6 +114,26 @@ export const atualizarUsuarioSchema = z.object({
 export const definirRolesSchema = z.object({
   roleIds: z.array(z.coerce.number().int().positive()),
 });
+export const definirSetoresSchema = z
+  .object({
+    setorIds: z
+      .array(z.coerce.number().int().positive())
+      .max(50, 'Informe no máximo 50 setores.'),
+    setorPrincipalId: z.coerce.number().int().positive().nullable().optional(),
+  })
+  .superRefine((dados, contexto) => {
+    if (
+      dados.setorPrincipalId !== undefined &&
+      dados.setorPrincipalId !== null &&
+      !dados.setorIds.includes(dados.setorPrincipalId)
+    ) {
+      contexto.addIssue({
+        code: 'custom',
+        path: ['setorPrincipalId'],
+        message: 'O setor principal deve estar entre os setores selecionados.',
+      });
+    }
+  });
 
 // ---------- Papéis / permissões ----------
 export const definirPermissoesSchema = z.object({
@@ -168,6 +188,7 @@ export const criarEtapaSchema = z.object({
   referenciaLegal: textoOpcional(255),
   condicional: z.boolean().optional(),
   condicaoAplicabilidade: textoOpcional(2000),
+  permitePulo: z.boolean().optional(),
 });
 export const atualizarEtapaSchema = criarEtapaSchema.partial();
 
@@ -188,6 +209,22 @@ export const listarProcessoQuerySchema = paginacaoSchema.extend({
   responsavelAtualId: z.coerce.number().int().positive().optional(),
   busca: textoOpcional(500),
 });
+export const selecaoEtapaCondicionalSchema = z
+  .object({
+    etapaId: z.coerce.number().int().positive(),
+    aplicavel: z.boolean(),
+    justificativa: textoOpcional(2000),
+  })
+  .superRefine((dados, contexto) => {
+    if (!dados.aplicavel && (!dados.justificativa || dados.justificativa.trim().length < 5)) {
+      contexto.addIssue({
+        code: 'custom',
+        path: ['justificativa'],
+        message: 'Informe a justificativa para a etapa não aplicável.',
+      });
+    }
+  });
+
 export const criarProcessoSchema = z.object({
   numero: textoObrigatorio(50),
   nome: textoObrigatorio(150).optional(),
@@ -195,6 +232,10 @@ export const criarProcessoSchema = z.object({
   descricao: textoOpcional(4000),
   tipoProcessoId: z.coerce.number().int().positive(),
   fluxoId: z.coerce.number().int().positive().optional(),
+  etapasCondicionais: z
+    .array(selecaoEtapaCondicionalSchema)
+    .max(200)
+    .optional(),
 });
 export const atualizarProcessoSchema = z.object({
   nome: textoObrigatorio(150).optional(),
@@ -214,12 +255,33 @@ export const atribuirProcessoSchema = z.object({
 });
 export const atribuirEtapaSchema = z.object({
   responsavelId: z.coerce.number().int().positive().nullable(),
+  setorId: z.coerce.number().int().positive().nullable().optional(),
+});
+export const atualizarPrazoEtapaSchema = z.object({
+  prazoGestaoDias: z.coerce.number().int().positive().nullable(),
 });
 export const justificativaSchema = z.object({
   justificativa: z.string().trim().min(5, 'Justificativa obrigatória.').max(2000),
 });
 export const encerrarProcessoSchema = z.object({
   justificativa: z.string().trim().min(5, 'Justificativa obrigatória.').max(2000),
+});
+export const bloquearEtapaSchema = z.object({
+  motivo: z.string().trim().min(5, 'Informe o motivo do bloqueio.').max(2000),
+});
+export const desbloquearEtapaSchema = z.object({
+  justificativa: z
+    .string()
+    .trim()
+    .min(5, 'Informe a justificativa do desbloqueio.')
+    .max(2000),
+});
+export const pularEtapaSchema = z.object({
+  justificativa: z
+    .string()
+    .trim()
+    .min(5, 'Informe a justificativa do pulo da etapa.')
+    .max(2000),
 });
 
 // ---------- Auditoria ----------

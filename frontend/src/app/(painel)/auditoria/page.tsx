@@ -50,6 +50,31 @@ function formatarRotuloMetadado(chave: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
+interface AlteracaoAuditavel {
+  anterior: unknown;
+  novo: unknown;
+}
+
+function extrairAlteracoes(
+  metadados: Record<string, unknown> | null,
+): Array<[string, AlteracaoAuditavel]> {
+  const bruto = metadados?.alteracoes;
+  if (!bruto || typeof bruto !== 'object' || Array.isArray(bruto)) {
+    return [];
+  }
+  return Object.entries(bruto).filter(
+    (entrada): entrada is [string, AlteracaoAuditavel] => {
+      const valor = entrada[1];
+      return (
+        valor !== null &&
+        typeof valor === 'object' &&
+        'anterior' in valor &&
+        'novo' in valor
+      );
+    },
+  );
+}
+
 /**
  * Extrai do registro o nome legível do alvo afetado. O `recurso` informa o
  * tipo de entidade; estes metadados informam qual registro específico.
@@ -121,8 +146,11 @@ export default function AuditoriaPage() {
   }
 
   const entradasMetadados = detalhe?.metadados
-    ? Object.entries(detalhe.metadados)
+    ? Object.entries(detalhe.metadados).filter(
+        ([chave]) => chave !== 'alteracoes',
+      )
     : [];
+  const alteracoes = extrairAlteracoes(detalhe?.metadados ?? null);
 
   return (
     <div className="flex flex-col gap-6">
@@ -361,6 +389,61 @@ export default function AuditoriaPage() {
                 <p className="mt-1 text-sm text-slate-800">
                   {detalhe.justificativa}
                 </p>
+              </div>
+            ) : null}
+
+            {alteracoes.length > 0 ? (
+              <div>
+                <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Alterações
+                </h3>
+                <div className="mt-1 overflow-x-auto rounded border border-slate-200">
+                  <table className="min-w-full divide-y divide-slate-200 text-sm">
+                    <caption className="sr-only">
+                      Valores anteriores e novos dos campos alterados
+                    </caption>
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th
+                          scope="col"
+                          className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500"
+                        >
+                          Campo
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500"
+                        >
+                          Antes
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wide text-slate-500"
+                        >
+                          Depois
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {alteracoes.map(([chave, alteracao]) => (
+                        <tr key={chave}>
+                          <th
+                            scope="row"
+                            className="whitespace-nowrap px-3 py-2 text-left text-xs font-medium text-slate-600"
+                          >
+                            {formatarRotuloMetadado(chave)}
+                          </th>
+                          <td className="break-words px-3 py-2 text-slate-700">
+                            {formatarValor(alteracao.anterior)}
+                          </td>
+                          <td className="break-words px-3 py-2 text-slate-900">
+                            {formatarValor(alteracao.novo)}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             ) : null}
 

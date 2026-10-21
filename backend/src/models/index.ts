@@ -139,6 +139,14 @@ Setor.belongsToMany(Usuario, {
   otherKey: 'usuarioId',
   as: 'usuarios',
 });
+UserSectorAssignment.belongsTo(Usuario, {
+  foreignKey: 'usuarioId',
+  as: 'usuario',
+});
+UserSectorAssignment.belongsTo(Setor, {
+  foreignKey: 'setorId',
+  as: 'setor',
+});
 
 // Auditoria
 Auditoria.belongsTo(Usuario, { foreignKey: 'usuarioId', as: 'usuario' });

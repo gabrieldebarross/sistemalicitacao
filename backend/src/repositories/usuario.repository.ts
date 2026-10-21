@@ -3,8 +3,10 @@ import { Op, type Transaction, type WhereOptions } from 'sequelize';
 import { Cargo } from '../models/cargo.js';
 import { Permission } from '../models/permission.js';
 import { Role } from '../models/role.js';
+import { Setor } from '../models/setor.js';
 import { Usuario } from '../models/usuario.js';
 import { UserRole } from '../models/user-role.js';
+import { UserSectorAssignment } from '../models/user-sector-assignment.js';
 
 export interface CriarUsuario {
   nome: string;
@@ -91,7 +93,8 @@ export async function listar(
   filtro: FiltroUsuario,
   offset: number,
   limit: number,
-): Promise<{ itens: Usuario[]; total: number }> {  const base: WhereOptions = {};
+): Promise<{ itens: Usuario[]; total: number }> {
+  const base: WhereOptions = {};
   if (filtro.ativo !== undefined) {
     base.ativo = filtro.ativo;
   }
@@ -150,4 +153,56 @@ export async function listarRoles(usuarioId: number): Promise<Role[]> {
   return vinculos
     .map((vinculo) => vinculo.role)
     .filter((role): role is Role => role !== undefined);
+}
+
+export interface VinculoSetorUsuario {
+  usuarioId: number;
+  setorId: number;
+  principal: boolean;
+  setor: Setor;
+}
+
+/** Carrega os vínculos usuário-setor de vários usuários em uma única consulta. */
+export async function listarVinculosSetores(
+  usuarioIds: readonly number[],
+): Promise<VinculoSetorUsuario[]> {
+  if (usuarioIds.length === 0) {
+    return [];
+  }
+  const vinculos = await UserSectorAssignment.findAll({
+    where: { usuarioId: { [Op.in]: [...usuarioIds] } },
+    include: [{ model: Setor, as: 'setor' }],
+  });
+  return vinculos
+    .filter(
+      (vinculo): vinculo is UserSectorAssignment & { setor: Setor } =>
+        vinculo.setor !== undefined,
+    )
+    .map((vinculo) => ({
+      usuarioId: vinculo.usuarioId,
+      setorId: vinculo.setorId,
+      principal: vinculo.principal,
+      setor: vinculo.setor,
+    }));
+}
+
+/** Substitui os setores de um usuário, mantendo no máximo um principal. */
+export async function definirSetores(
+  usuarioId: number,
+  setorIds: readonly number[],
+  setorPrincipalId: number | null,
+  transaction: Transaction,
+): Promise<void> {
+  await UserSectorAssignment.destroy({ where: { usuarioId }, transaction });
+  if (setorIds.length === 0) {
+    return;
+  }
+  await UserSectorAssignment.bulkCreate(
+    setorIds.map((setorId) => ({
+      usuarioId,
+      setorId,
+      principal: setorId === setorPrincipalId,
+    })),
+    { transaction },
+  );
 }

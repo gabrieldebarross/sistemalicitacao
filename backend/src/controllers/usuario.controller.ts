@@ -4,6 +4,7 @@ import {
   atualizarUsuarioSchema,
   criarUsuarioSchema,
   definirRolesSchema,
+  definirSetoresSchema,
   idParamSchema,
   listarUsuarioQuerySchema,
 } from '../schemas/index.js';
@@ -57,6 +58,18 @@ export async function definirRoles(
   responderOk(
     res,
     await usuarioService.definirRoles(id, roleIds, contextoDe(req, res)),
+  );
+}
+
+export async function definirSetores(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const { id } = validar(idParamSchema, req.params);
+  const dados = validar(definirSetoresSchema, req.body);
+  responderOk(
+    res,
+    await usuarioService.definirSetores(id, dados, contextoDe(req, res)),
   );
 }
 

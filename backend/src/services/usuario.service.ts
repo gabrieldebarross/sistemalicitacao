@@ -7,12 +7,21 @@ import {
 } from '../errors/app-error.js';
 import type { Usuario } from '../models/usuario.js';
 import * as roleRepo from '../repositories/role.repository.js';
+import * as setorRepo from '../repositories/setor.repository.js';
 import * as usuarioRepo from '../repositories/usuario.repository.js';
 import type { ContextoRequisicao } from '../types/context.js';
+import { diffAuditoria } from '../utils/audit-diff.js';
 import { montarPaginado, type ResultadoPaginado } from '../utils/http.js';
 import { hashSenha } from '../utils/password.js';
 import { resolverPaginacao } from '../utils/pagination.js';
 import * as auditoria from './auditoria.service.js';
+
+export interface SetorUsuarioDTO {
+  id: number;
+  nome: string;
+  sigla: string | null;
+  principal: boolean;
+}
 
 export interface UsuarioDTO {
   id: number;
@@ -21,15 +30,44 @@ export interface UsuarioDTO {
   ativo: boolean;
   cargo: { id: number; nome: string } | null;
   roles: string[];
+  setores: SetorUsuarioDTO[];
 }
 
 export interface UsuarioAtribuivelDTO {
   id: number;
   nome: string;
   cargo: string | null;
+  setores: SetorUsuarioDTO[];
+  setorPrincipalId: number | null;
 }
 
-function toDTO(usuario: Usuario): UsuarioDTO {
+function setoresDoUsuario(
+  usuarioId: number,
+  vinculos: readonly usuarioRepo.VinculoSetorUsuario[],
+): SetorUsuarioDTO[] {
+  return vinculos
+    .filter((vinculo) => vinculo.usuarioId === usuarioId)
+    .map((vinculo) => ({
+      id: vinculo.setor.id,
+      nome: vinculo.setor.nome,
+      sigla: vinculo.setor.sigla,
+      principal: vinculo.principal,
+    }))
+    .sort(
+      (a, b) =>
+        Number(b.principal) - Number(a.principal) ||
+        a.nome.localeCompare(b.nome),
+    );
+}
+
+function setorPrincipalDe(setores: readonly SetorUsuarioDTO[]): number | null {
+  return setores.find((setor) => setor.principal)?.id ?? null;
+}
+
+function toDTO(
+  usuario: Usuario,
+  vinculos: readonly usuarioRepo.VinculoSetorUsuario[],
+): UsuarioDTO {
   return {
     id: usuario.id,
     nome: usuario.nome,
@@ -39,6 +77,7 @@ function toDTO(usuario: Usuario): UsuarioDTO {
       ? { id: usuario.cargo.id, nome: usuario.cargo.nome }
       : null,
     roles: (usuario.roles ?? []).map((role) => role.nome),
+    setores: setoresDoUsuario(usuario.id, vinculos),
   };
 }
 
@@ -57,7 +96,15 @@ export async function listar(input: {
     filtro.ativo = input.ativo;
   }
   const { itens, total } = await usuarioRepo.listar(filtro, offset, limit);
-  return montarPaginado(itens.map(toDTO), total, pagina, tamanhoPagina);
+  const vinculos = await usuarioRepo.listarVinculosSetores(
+    itens.map((usuario) => usuario.id),
+  );
+  return montarPaginado(
+    itens.map((usuario) => toDTO(usuario, vinculos)),
+    total,
+    pagina,
+    tamanhoPagina,
+  );
 }
 
 export async function buscarPorId(id: number): Promise<UsuarioDTO> {
@@ -65,7 +112,8 @@ export async function buscarPorId(id: number): Promise<UsuarioDTO> {
   if (!usuario) {
     throw new NotFoundError('Usuário não encontrado.');
   }
-  return toDTO(usuario);
+  const vinculos = await usuarioRepo.listarVinculosSetores([id]);
+  return toDTO(usuario, vinculos);
 }
 
 /**
@@ -74,11 +122,19 @@ export async function buscarPorId(id: number): Promise<UsuarioDTO> {
  */
 export async function listarAtribuiveis(): Promise<UsuarioAtribuivelDTO[]> {
   const usuarios = await usuarioRepo.listarAtivos();
-  return usuarios.map((usuario) => ({
-    id: usuario.id,
-    nome: usuario.nome,
-    cargo: usuario.cargo?.nome ?? null,
-  }));
+  const vinculos = await usuarioRepo.listarVinculosSetores(
+    usuarios.map((usuario) => usuario.id),
+  );
+  return usuarios.map((usuario) => {
+    const setores = setoresDoUsuario(usuario.id, vinculos);
+    return {
+      id: usuario.id,
+      nome: usuario.nome,
+      cargo: usuario.cargo?.nome ?? null,
+      setores,
+      setorPrincipalId: setorPrincipalDe(setores),
+    };
+  });
 }
 
 async function validarRoles(roleIds: readonly number[]): Promise<void> {
@@ -158,6 +214,13 @@ export async function atualizar(
   if (!usuario) {
     throw new NotFoundError('Usuário não encontrado.');
   }
+  const antes = {
+    nome: usuario.nome,
+    email: usuario.email,
+    cargoId: usuario.cargoId,
+    ativo: usuario.ativo,
+    senhaHash: usuario.senhaHash,
+  };
   if (input.email !== undefined) {
     const email = normalizarEmail(input.email);
     const existente = await usuarioRepo.buscarPorEmail(email);
@@ -181,6 +244,17 @@ export async function atualizar(
     usuario.senhaProvisoria = true;
   }
   await usuario.save();
+  const alteracoes = diffAuditoria(
+    antes,
+    {
+      nome: usuario.nome,
+      email: usuario.email,
+      cargoId: usuario.cargoId,
+      ativo: usuario.ativo,
+      senhaHash: usuario.senhaHash,
+    },
+    ['nome', 'email', 'cargoId', 'ativo', 'senhaHash'],
+  );
   await auditoria.registrar(contexto, {
     acao: 'ALTERAR',
     recurso: 'usuario',
@@ -188,8 +262,8 @@ export async function atualizar(
     metadados: {
       nome: usuario.nome,
       email: usuario.email,
-      campos: Object.keys(input),
       senhaRedefinida: input.senha !== undefined,
+      alteracoes,
     },
   });
   return buscarPorId(usuario.id);
@@ -222,6 +296,70 @@ export async function definirRoles(
     metadados: {
       usuario: usuario.nome,
       papeis: roles.map((role) => role.nome),
+    },
+  });
+  return buscarPorId(id);
+}
+
+export async function definirSetores(
+  id: number,
+  input: { setorIds: number[]; setorPrincipalId?: number | null },
+  contexto: ContextoRequisicao,
+): Promise<UsuarioDTO> {
+  const usuario = await usuarioRepo.buscarPorId(id);
+  if (!usuario) {
+    throw new NotFoundError('Usuário não encontrado.');
+  }
+
+  const setorIds = [...new Set(input.setorIds)];
+  const setores = await setorRepo.buscarPorIds(setorIds);
+  if (setores.length !== setorIds.length) {
+    throw new ValidationError('Um ou mais setores informados não existem.');
+  }
+  if (setores.some((setor) => !setor.ativo)) {
+    throw new ValidationError(
+      'Não é possível vincular um usuário a um setor inativo.',
+    );
+  }
+
+  const setorPrincipalId = input.setorPrincipalId ?? setorIds[0] ?? null;
+  if (setorPrincipalId !== null && !setorIds.includes(setorPrincipalId)) {
+    throw new ValidationError(
+      'O setor principal deve estar entre os setores selecionados.',
+    );
+  }
+
+  const antes = await usuarioRepo.listarVinculosSetores([id]);
+  await sequelize.transaction(async (transaction) => {
+    await usuarioRepo.definirSetores(
+      id,
+      setorIds,
+      setorPrincipalId,
+      transaction,
+    );
+  });
+  const depois = await usuarioRepo.listarVinculosSetores([id]);
+
+  const descrever = (
+    vinculos: readonly usuarioRepo.VinculoSetorUsuario[],
+  ): Array<{ id: number; nome: string; principal: boolean }> =>
+    vinculos
+      .filter((vinculo) => vinculo.usuarioId === id)
+      .map((vinculo) => ({
+        id: vinculo.setor.id,
+        nome: vinculo.setor.nome,
+        principal: vinculo.principal,
+      }));
+
+  await auditoria.registrar(contexto, {
+    acao: 'DEFINIR_SETORES',
+    recurso: 'usuario',
+    recursoId: id,
+    metadados: {
+      usuario: usuario.nome,
+      setoresAnteriores: descrever(antes),
+      setoresNovos: descrever(depois),
+      setorPrincipalId,
     },
   });
   return buscarPorId(id);

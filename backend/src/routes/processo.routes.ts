@@ -57,6 +57,26 @@ processoRouter.post(
   exigirPermissao(PERMISSIONS.PROCESSOS_ASSIGN),
   controller.atribuirEtapa,
 );
+processoRouter.patch(
+  '/:id/etapas/:etapaId/prazo',
+  exigirPermissao(PERMISSIONS.PROCESSOS_UPDATE),
+  controller.atualizarPrazoEtapa,
+);
+processoRouter.post(
+  '/:id/etapas/:etapaId/bloquear',
+  exigirPermissao(PERMISSIONS.PROCESSOS_BLOCK),
+  controller.bloquearEtapa,
+);
+processoRouter.post(
+  '/:id/etapas/:etapaId/desbloquear',
+  exigirPermissao(PERMISSIONS.PROCESSOS_UNBLOCK),
+  controller.desbloquearEtapa,
+);
+processoRouter.post(
+  '/:id/etapas/:etapaId/pular',
+  exigirPermissao(PERMISSIONS.PROCESSOS_SKIP),
+  controller.pularEtapa,
+);
 processoRouter.post(
   '/:id/atribuir',
   exigirPermissao(PERMISSIONS.PROCESSOS_ASSIGN),

@@ -30,6 +30,7 @@ import {
 import { useSessao } from '@/lib/session';
 import type {
   ProcessoDetalhe,
+  ProcessoEtapa,
   Setor,
   UsuarioAtribuivel,
 } from '@/lib/tipos';
@@ -43,7 +44,11 @@ type ModalTipo =
   | 'editar'
   | 'anular'
   | 'revogar'
-  | 'concluirProcesso';
+  | 'concluirProcesso'
+  | 'bloquearEtapa'
+  | 'desbloquearEtapa'
+  | 'pularEtapa'
+  | 'prazoEtapa';
 
 const TOM_STATUS: Record<string, 'neutro' | 'info' | 'sucesso' | 'alerta' | 'perigo'> = {
   RASCUNHO: 'neutro',
@@ -77,8 +82,11 @@ function duracaoEtapa(
     return '—';
   }
   const horas = diferenca / 3_600_000;
+  if (horas < 1) {
+    return `${Math.max(1, Math.round(horas * 60))} min`;
+  }
   if (horas < 24) {
-    return `${Math.max(1, Math.round(horas))} h`;
+    return `${Math.round(horas)} h`;
   }
   return `${(horas / 24).toFixed(1)} d`;
 }
@@ -101,6 +109,8 @@ export default function ProcessoDetalhePage() {
   const [setorId, setSetorId] = useState('');
   const [responsavelId, setResponsavelId] = useState('');
   const [responsavelEtapaId, setResponsavelEtapaId] = useState('');
+  const [setorEtapaId, setSetorEtapaId] = useState('');
+  const [prazoDias, setPrazoDias] = useState('');
   const [setores, setSetores] = useState<Setor[]>([]);
   const [usuarios, setUsuarios] = useState<UsuarioAtribuivel[]>([]);
   const [nome, setNome] = useState('');
@@ -124,12 +134,16 @@ export default function ProcessoDetalhePage() {
     void carregar();
   }, [carregar]);
 
-  async function executar(acao: () => Promise<unknown>) {
+  async function executar(
+    acao: () => Promise<unknown>,
+    aoConcluir?: () => void,
+  ) {
     setProcessando(true);
     setErro('');
     try {
       await acao();
       setModal(null);
+      aoConcluir?.();
       await carregar();
     } catch (falha) {
       setErro(mensagemDeErro(falha));
@@ -155,25 +169,51 @@ export default function ProcessoDetalhePage() {
       .catch(() => setUsuarios([]));
   }
 
+  function carregarSetores() {
+    if (setores.length > 0) {
+      return;
+    }
+    api
+      .get<Setor[]>('/setores?ativo=true&tamanhoPagina=100')
+      .then((r) => setSetores(r.dados))
+      .catch(() => setSetores([]));
+  }
+
+  function setorPrincipalDoUsuario(usuario: UsuarioAtribuivel): number | null {
+    return (
+      usuario.setorPrincipalId ??
+      usuario.setores.find((setor) => setor.principal)?.id ??
+      usuario.setores[0]?.id ??
+      null
+    );
+  }
+
   function abrirAtribuir() {
     setSetorId(processo?.setorAtual ? String(processo.setorAtual.id) : '');
     setResponsavelId(
       processo?.responsavelAtual ? String(processo.responsavelAtual.id) : '',
     );
     setModal('atribuir');
-    if (setores.length === 0) {
-      api
-        .get<Setor[]>('/setores?ativo=true&tamanhoPagina=100')
-        .then((r) => setSetores(r.dados))
-        .catch(() => setSetores([]));
-    }
+    carregarSetores();
     carregarUsuarios();
   }
 
-  function abrirAtribuirEtapa(etapaId: number, responsavelAtualId: number | null) {
-    setEtapaAtribuir(etapaId);
-    setResponsavelEtapaId(responsavelAtualId ? String(responsavelAtualId) : '');
+  function abrirAtribuirEtapa(etapa: ProcessoEtapa) {
+    setEtapaAtribuir(etapa.id);
+    setResponsavelEtapaId(
+      etapa.responsavel ? String(etapa.responsavel.id) : '',
+    );
+    setSetorEtapaId(etapa.setor ? String(etapa.setor.id) : '');
+    carregarSetores();
     carregarUsuarios();
+  }
+
+  function abrirPrazo(etapa: ProcessoEtapa) {
+    setEtapaAlvo(etapa.id);
+    setPrazoDias(
+      etapa.prazoGestaoDias !== null ? String(etapa.prazoGestaoDias) : '',
+    );
+    setModal('prazoEtapa');
   }
 
   function abrirEditar() {
@@ -263,7 +303,7 @@ export default function ProcessoDetalhePage() {
           ) : null}
           {!terminal && temPermissao('processos.assign') ? (
             <Botao variante="secundario" onClick={abrirAtribuir}>
-              Atribuir
+              Atribuir ao processo
             </Botao>
           ) : null}
           {!terminal && temPermissao('processos.cancel') ? (
@@ -290,7 +330,9 @@ export default function ProcessoDetalhePage() {
             {processo.etapas.map((etapa) => {
               const ehAtual = etapa.id === etapaAtual?.id;
               const podeConcluir =
-                ehAtual && temPermissao('processos.advance');
+                ehAtual &&
+                etapa.status === 'EM_ANDAMENTO' &&
+                temPermissao('processos.advance');
               const temAnteriorConcluida = processo.etapas.some(
                 (anterior) =>
                   anterior.sequencia < etapa.sequencia &&
@@ -298,12 +340,33 @@ export default function ProcessoDetalhePage() {
               );
               const podeDevolver =
                 ehAtual &&
+                etapa.status === 'EM_ANDAMENTO' &&
                 temPermissao('processos.return') &&
                 temAnteriorConcluida;
               const podeAtribuirEtapa =
                 !terminal &&
                 temPermissao('processos.assign') &&
                 !['CONCLUIDA', 'PULADA'].includes(etapa.status);
+              const podeEditarPrazo =
+                !terminal &&
+                temPermissao('processos.update') &&
+                !['CONCLUIDA', 'PULADA'].includes(etapa.status);
+              const podeBloquear =
+                emAndamento &&
+                ehAtual &&
+                etapa.status === 'EM_ANDAMENTO' &&
+                temPermissao('processos.block');
+              const podeDesbloquear =
+                emAndamento &&
+                ehAtual &&
+                etapa.status === 'BLOQUEADA' &&
+                temPermissao('processos.unblock');
+              const podePular =
+                emAndamento &&
+                temPermissao('processos.skip') &&
+                ['PENDENTE', 'EM_ANDAMENTO'].includes(etapa.status) &&
+                (etapa.status !== 'EM_ANDAMENTO' || ehAtual) &&
+                (!etapa.obrigatoria || etapa.permitePulo);
               const retorno = etapa.retornoParaEtapaId
                 ? processo.etapas.find(
                     (item) => item.id === etapa.retornoParaEtapaId,
@@ -341,10 +404,20 @@ export default function ProcessoDetalhePage() {
                           </strong>
                         </span>
                         <span>Setor: {etapa.setor?.nome ?? '—'}</span>
-                        <span>Prazo: {formatarData(etapa.dataPrevista)}</span>
                         <span>
-                          Duração:{' '}
-                          {duracaoEtapa(etapa.dataInicio, etapa.dataConclusao)}
+                          Prazo: {formatarData(etapa.dataPrevista)}
+                          {etapa.prazoGestaoDias !== null
+                            ? ` (${etapa.prazoGestaoDias} dia${
+                                etapa.prazoGestaoDias === 1 ? '' : 's'
+                              })`
+                            : ''}
+                        </span>
+                        <span>
+                          Duração desde o início:{' '}
+                          {duracaoEtapa(
+                            etapa.dataInicio,
+                            etapa.dataConclusao ?? etapa.puladaEm,
+                          )}
                         </span>
                       </div>
                       {retorno ? (
@@ -353,19 +426,41 @@ export default function ProcessoDetalhePage() {
                           {retorno.sequencia}. {retorno.nome}.
                         </p>
                       ) : null}
+                      {etapa.condicional && etapa.condicaoAplicabilidade ? (
+                        <p className="mt-1 text-xs text-slate-500">
+                          Condição de aplicabilidade:{' '}
+                          {etapa.condicaoAplicabilidade}
+                        </p>
+                      ) : null}
+                      {etapa.status === 'BLOQUEADA' && etapa.motivoBloqueio ? (
+                        <p className="mt-1 text-xs text-amber-800">
+                          Motivo do bloqueio: {etapa.motivoBloqueio}
+                        </p>
+                      ) : null}
+                      {etapa.status === 'PULADA' ? (
+                        <p className="mt-1 text-xs text-slate-600">
+                          Pulada em {formatarDataHora(etapa.puladaEm)}
+                          {etapa.motivoPulo
+                            ? ` — ${etapa.motivoPulo}`
+                            : ''}
+                        </p>
+                      ) : null}
                     </div>
                     <div className="flex flex-wrap gap-2 lg:justify-end">
                       {podeAtribuirEtapa ? (
                         <Botao
                           variante="secundario"
-                          onClick={() =>
-                            abrirAtribuirEtapa(
-                              etapa.id,
-                              etapa.responsavel?.id ?? null,
-                            )
-                          }
+                          onClick={() => abrirAtribuirEtapa(etapa)}
                         >
-                          Atribuir
+                          Atribuir etapa
+                        </Botao>
+                      ) : null}
+                      {podeEditarPrazo ? (
+                        <Botao
+                          variante="secundario"
+                          onClick={() => abrirPrazo(etapa)}
+                        >
+                          Prazo
                         </Botao>
                       ) : null}
                       {podeDevolver ? (
@@ -374,6 +469,30 @@ export default function ProcessoDetalhePage() {
                           onClick={() => abrir('devolverEtapa', etapa.id)}
                         >
                           Devolver
+                        </Botao>
+                      ) : null}
+                      {podeBloquear ? (
+                        <Botao
+                          variante="secundario"
+                          onClick={() => abrir('bloquearEtapa', etapa.id)}
+                        >
+                          Bloquear
+                        </Botao>
+                      ) : null}
+                      {podeDesbloquear ? (
+                        <Botao
+                          variante="secundario"
+                          onClick={() => abrir('desbloquearEtapa', etapa.id)}
+                        >
+                          Desbloquear
+                        </Botao>
+                      ) : null}
+                      {podePular ? (
+                        <Botao
+                          variante="secundario"
+                          onClick={() => abrir('pularEtapa', etapa.id)}
+                        >
+                          Pular etapa
                         </Botao>
                       ) : null}
                       {podeConcluir ? (
@@ -522,7 +641,8 @@ export default function ProcessoDetalhePage() {
         <div className="flex flex-col gap-4">
           <p className="text-sm text-slate-600">
             Ao concluir novamente a etapa de destino, o processo retornará
-            automaticamente para a etapa que fez a devolução.
+            diretamente para a etapa que fez a devolução, sem refazer as etapas
+            intermediárias. Você pode escolher qualquer etapa já concluída.
           </p>
           <Campo rotulo="Motivo" htmlFor="motivo" obrigatorio>
             <AreaTexto
@@ -560,8 +680,208 @@ export default function ProcessoDetalhePage() {
       </Modal>
 
       <Modal
+        aberto={modal === 'prazoEtapa'}
+        titulo={
+          etapaAlvo
+            ? `Prazo da etapa — ${
+                processo?.etapas.find((etapa) => etapa.id === etapaAlvo)?.nome ??
+                ''
+              }`
+            : 'Prazo da etapa'
+        }
+        aoFechar={() => setModal(null)}
+        rodape={
+          <>
+            <Botao variante="secundario" onClick={() => setModal(null)}>
+              Cancelar
+            </Botao>
+            <Botao
+              disabled={
+                processando ||
+                (prazoDias.trim() !== '' && Number(prazoDias) < 1)
+              }
+              onClick={() =>
+                executar(() =>
+                  api.patch(`/processos/${id}/etapas/${etapaAlvo}/prazo`, {
+                    prazoGestaoDias: prazoDias.trim()
+                      ? Number(prazoDias)
+                      : null,
+                  }),
+                )
+              }
+            >
+              Salvar prazo
+            </Botao>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-600">
+            O prazo é copiado do fluxo na criação do processo, mas pode ser
+            ajustado apenas para esta etapa.
+          </p>
+          <Campo
+            rotulo="Prazo interno (dias)"
+            htmlFor="prazo-dias"
+            dica="Deixe em branco para remover o prazo desta etapa."
+          >
+            <Entrada
+              id="prazo-dias"
+              type="number"
+              min={1}
+              value={prazoDias}
+              onChange={(evento) => setPrazoDias(evento.target.value)}
+            />
+          </Campo>
+        </div>
+      </Modal>
+
+      <Modal
+        aberto={modal === 'bloquearEtapa'}
+        titulo={
+          etapaAlvo
+            ? `Bloquear etapa — ${
+                processo?.etapas.find((etapa) => etapa.id === etapaAlvo)?.nome ??
+                ''
+              }`
+            : 'Bloquear etapa'
+        }
+        aoFechar={() => setModal(null)}
+        rodape={
+          <>
+            <Botao variante="secundario" onClick={() => setModal(null)}>
+              Cancelar
+            </Botao>
+            <Botao
+              variante="perigo"
+              disabled={processando || texto.trim().length < 5}
+              onClick={() =>
+                executar(() =>
+                  api.post(
+                    `/processos/${id}/etapas/${etapaAlvo}/bloquear`,
+                    { motivo: texto.trim() },
+                  ),
+                )
+              }
+            >
+              Bloquear
+            </Botao>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-600">
+            O bloqueio interrompe a etapa atual. Informe o motivo; a ação será
+            registrada no histórico e na auditoria.
+          </p>
+          <Campo rotulo="Motivo do bloqueio" htmlFor="motivo-bloqueio" obrigatorio>
+            <AreaTexto
+              id="motivo-bloqueio"
+              value={texto}
+              onChange={(evento) => setTexto(evento.target.value)}
+            />
+          </Campo>
+        </div>
+      </Modal>
+
+      <Modal
+        aberto={modal === 'desbloquearEtapa'}
+        titulo={
+          etapaAlvo
+            ? `Desbloquear etapa — ${
+                processo?.etapas.find((etapa) => etapa.id === etapaAlvo)?.nome ??
+                ''
+              }`
+            : 'Desbloquear etapa'
+        }
+        aoFechar={() => setModal(null)}
+        rodape={
+          <>
+            <Botao variante="secundario" onClick={() => setModal(null)}>
+              Cancelar
+            </Botao>
+            <Botao
+              disabled={processando || texto.trim().length < 5}
+              onClick={() =>
+                executar(() =>
+                  api.post(
+                    `/processos/${id}/etapas/${etapaAlvo}/desbloquear`,
+                    { justificativa: texto.trim() },
+                  ),
+                )
+              }
+            >
+              Desbloquear
+            </Botao>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-600">
+            A etapa voltará ao andamento. Informe a justificativa para o
+            desbloqueio.
+          </p>
+          <Campo rotulo="Justificativa" htmlFor="justificativa-desbloqueio" obrigatorio>
+            <AreaTexto
+              id="justificativa-desbloqueio"
+              value={texto}
+              onChange={(evento) => setTexto(evento.target.value)}
+            />
+          </Campo>
+        </div>
+      </Modal>
+
+      <Modal
+        aberto={modal === 'pularEtapa'}
+        titulo={
+          etapaAlvo
+            ? `Pular etapa — ${
+                processo?.etapas.find((etapa) => etapa.id === etapaAlvo)?.nome ??
+                ''
+              }`
+            : 'Pular etapa'
+        }
+        aoFechar={() => setModal(null)}
+        rodape={
+          <>
+            <Botao variante="secundario" onClick={() => setModal(null)}>
+              Cancelar
+            </Botao>
+            <Botao
+              variante="perigo"
+              disabled={processando || texto.trim().length < 5}
+              onClick={() =>
+                executar(() =>
+                  api.post(`/processos/${id}/etapas/${etapaAlvo}/pular`, {
+                    justificativa: texto.trim(),
+                  }),
+                )
+              }
+            >
+              Pular etapa
+            </Botao>
+          </>
+        }
+      >
+        <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-600">
+            A etapa será registrada como pulada. Se for a etapa atual, o
+            processo avança para a próxima etapa não finalizada. A justificativa
+            é obrigatória e ficará no histórico.
+          </p>
+          <Campo rotulo="Justificativa do pulo" htmlFor="justificativa-pulo" obrigatorio>
+            <AreaTexto
+              id="justificativa-pulo"
+              value={texto}
+              onChange={(evento) => setTexto(evento.target.value)}
+            />
+          </Campo>
+        </div>
+      </Modal>
+
+      <Modal
         aberto={modal === 'atribuir'}
-        titulo="Atribuir responsável"
+        titulo="Atribuir responsável ao processo"
         aoFechar={() => setModal(null)}
         rodape={
           <>
@@ -587,13 +907,17 @@ export default function ProcessoDetalhePage() {
         }
       >
         <div className="flex flex-col gap-4">
+          <p className="text-sm text-slate-600">
+            A alteração vale apenas para o processo e não modifica o responsável
+            das etapas.
+          </p>
           <Campo rotulo="Setor" htmlFor="setor">
             <Selecao
               id="setor"
               value={setorId}
               onChange={(evento) => setSetorId(evento.target.value)}
             >
-              <option value="">Manter atual</option>
+              <option value="">Sem setor definido</option>
               {setores.map((setor) => (
                 <option key={setor.id} value={setor.id}>
                   {setor.nome}
@@ -605,12 +929,29 @@ export default function ProcessoDetalhePage() {
             <Selecao
               id="responsavel"
               value={responsavelId}
-              onChange={(evento) => setResponsavelId(evento.target.value)}
+              onChange={(evento) => {
+                const valor = evento.target.value;
+                setResponsavelId(valor);
+                const usuario = usuarios.find(
+                  (item) => String(item.id) === valor,
+                );
+                const principal = usuario
+                  ? setorPrincipalDoUsuario(usuario)
+                  : null;
+                if (principal) {
+                  setSetorId(String(principal));
+                }
+              }}
             >
-              <option value="">Manter atual</option>
+              <option value="">Sem responsável definido</option>
               {usuarios.map((usuario) => (
                 <option key={usuario.id} value={usuario.id}>
                   {usuario.nome}
+                  {usuario.setores.length > 0
+                    ? ` (${usuario.setores
+                        .map((setor) => setor.nome)
+                        .join(', ')})`
+                    : ''}
                 </option>
               ))}
             </Selecao>
@@ -637,15 +978,18 @@ export default function ProcessoDetalhePage() {
             <Botao
               disabled={processando}
               onClick={() =>
-                executar(() =>
-                  api.post(
-                    `/processos/${id}/etapas/${etapaAtribuir}/atribuir`,
-                    {
-                      responsavelId: responsavelEtapaId
-                        ? Number(responsavelEtapaId)
-                        : null,
-                    },
-                  ),
+                executar(
+                  () =>
+                    api.post(
+                      `/processos/${id}/etapas/${etapaAtribuir}/atribuir`,
+                      {
+                        responsavelId: responsavelEtapaId
+                          ? Number(responsavelEtapaId)
+                          : null,
+                        setorId: setorEtapaId ? Number(setorEtapaId) : null,
+                      },
+                    ),
+                  () => setEtapaAtribuir(null),
                 )
               }
             >
@@ -656,25 +1000,59 @@ export default function ProcessoDetalhePage() {
       >
         <div className="flex flex-col gap-4">
           <p className="text-sm text-slate-600">
-            A atribuição vale apenas para esta etapa e não altera as demais.
+            A atribuição vale apenas para esta etapa e não altera as demais
+            etapas nem o responsável do processo.
           </p>
           <Campo
             rotulo="Responsável"
             htmlFor="responsavel-etapa"
-            dica="Deixe em branco para remover o responsável desta etapa."
+            dica="Ao selecionar, o setor principal do usuário é sugerido automaticamente."
           >
             <Selecao
               id="responsavel-etapa"
               value={responsavelEtapaId}
-              onChange={(evento) =>
-                setResponsavelEtapaId(evento.target.value)
-              }
+              onChange={(evento) => {
+                const valor = evento.target.value;
+                setResponsavelEtapaId(valor);
+                const usuario = usuarios.find(
+                  (item) => String(item.id) === valor,
+                );
+                const principal = usuario
+                  ? setorPrincipalDoUsuario(usuario)
+                  : null;
+                if (principal) {
+                  setSetorEtapaId(String(principal));
+                }
+              }}
             >
               <option value="">Sem responsável</option>
               {usuarios.map((usuario) => (
                 <option key={usuario.id} value={usuario.id}>
                   {usuario.nome}
                   {usuario.cargo ? ` — ${usuario.cargo}` : ''}
+                  {usuario.setores.length > 0
+                    ? ` (${usuario.setores
+                        .map((setor) => setor.nome)
+                        .join(', ')})`
+                    : ''}
+                </option>
+              ))}
+            </Selecao>
+          </Campo>
+          <Campo
+            rotulo="Setor da etapa"
+            htmlFor="setor-etapa"
+            dica="Usado para exibir e encaminhar a etapa ao setor correto."
+          >
+            <Selecao
+              id="setor-etapa"
+              value={setorEtapaId}
+              onChange={(evento) => setSetorEtapaId(evento.target.value)}
+            >
+              <option value="">Sem setor definido</option>
+              {setores.map((setor) => (
+                <option key={setor.id} value={setor.id}>
+                  {setor.nome}
                 </option>
               ))}
             </Selecao>

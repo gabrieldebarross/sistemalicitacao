@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import { PROCESSO_ETAPA_STATUS, PROCESSO_STATUS } from '../../src/domain/enums.js';
 import {
+  classificarPendenciasConclusao,
   etapaConcluida,
+  etapaPodeSerPulada,
   fluxoCompleto,
   podeTransicionarEtapa,
   podeTransicionarProcesso,
@@ -139,7 +141,7 @@ describe('retorno após devolução', () => {
     expect(proxima?.id).toBe(3);
   });
 
-  it('refaz as etapas intermediárias antes de voltar à origem', () => {
+  it('retorna diretamente à origem, sem refazer etapas intermediárias', () => {
     const comOrigemDistante = etapas.map((etapa) =>
       etapa.id === 2
         ? { ...etapa, retornoParaEtapaId: 4 }
@@ -147,18 +149,7 @@ describe('retorno após devolução', () => {
     );
     const atual = comOrigemDistante[1];
     const proxima = proximaEtapaAposConclusao(comOrigemDistante, atual);
-    expect(proxima?.id).toBe(3);
-
-    const intermediariaConcluida = comOrigemDistante.map((etapa) =>
-      etapa.id === 3
-        ? { ...etapa, status: PROCESSO_ETAPA_STATUS.CONCLUIDA }
-        : etapa,
-    );
-    const depois = proximaEtapaAposConclusao(
-      intermediariaConcluida,
-      intermediariaConcluida[2],
-    );
-    expect(depois?.id).toBe(4);
+    expect(proxima?.id).toBe(4);
   });
 
   it('segue a ordem linear quando não há retorno pendente', () => {
@@ -187,5 +178,105 @@ describe('retorno após devolução', () => {
       },
     );
     expect(proxima).toBeUndefined();
+  });
+});
+
+describe('pulo de etapa', () => {
+  const base = {
+    id: 1,
+    sequencia: 1,
+    status: PROCESSO_ETAPA_STATUS.PENDENTE,
+    obrigatoria: true,
+  } as const;
+
+  it('permite pular etapa obrigatória somente com permitePulo', () => {
+    expect(etapaPodeSerPulada({ ...base, permitePulo: false })).toBe(false);
+    expect(etapaPodeSerPulada({ ...base, permitePulo: true })).toBe(true);
+  });
+
+  it('permite pular etapa opcional sem permitePulo', () => {
+    expect(
+      etapaPodeSerPulada({ ...base, obrigatoria: false, permitePulo: false }),
+    ).toBe(true);
+  });
+
+  it('nega pulo de etapa bloqueada, concluída ou já pulada', () => {
+    for (const status of [
+      PROCESSO_ETAPA_STATUS.BLOQUEADA,
+      PROCESSO_ETAPA_STATUS.CONCLUIDA,
+      PROCESSO_ETAPA_STATUS.PULADA,
+    ]) {
+      expect(
+        etapaPodeSerPulada({
+          ...base,
+          status,
+          obrigatoria: false,
+          permitePulo: true,
+        }),
+      ).toBe(false);
+    }
+  });
+
+  it('aceita pulo de etapa em andamento', () => {
+    expect(
+      etapaPodeSerPulada({
+        ...base,
+        status: PROCESSO_ETAPA_STATUS.EM_ANDAMENTO,
+        obrigatoria: true,
+        permitePulo: true,
+      }),
+    ).toBe(true);
+  });
+});
+
+describe('pendências para conclusão do processo', () => {
+  it('separa obrigatórias e opcionais não finalizadas', () => {
+    const pendencias = classificarPendenciasConclusao([
+      {
+        id: 1,
+        sequencia: 1,
+        status: PROCESSO_ETAPA_STATUS.CONCLUIDA,
+        obrigatoria: true,
+      },
+      {
+        id: 2,
+        sequencia: 2,
+        status: PROCESSO_ETAPA_STATUS.EM_ANDAMENTO,
+        obrigatoria: true,
+      },
+      {
+        id: 3,
+        sequencia: 3,
+        status: PROCESSO_ETAPA_STATUS.BLOQUEADA,
+        obrigatoria: false,
+      },
+      {
+        id: 4,
+        sequencia: 4,
+        status: PROCESSO_ETAPA_STATUS.PULADA,
+        obrigatoria: true,
+      },
+    ]);
+    expect(pendencias.obrigatorias.map((etapa) => etapa.id)).toEqual([2]);
+    expect(pendencias.opcionais.map((etapa) => etapa.id)).toEqual([3]);
+  });
+
+  it('não retorna pendências quando tudo está concluído ou pulado', () => {
+    const pendencias = classificarPendenciasConclusao([
+      {
+        id: 1,
+        sequencia: 1,
+        status: PROCESSO_ETAPA_STATUS.CONCLUIDA,
+        obrigatoria: true,
+      },
+      {
+        id: 2,
+        sequencia: 2,
+        status: PROCESSO_ETAPA_STATUS.PULADA,
+        obrigatoria: false,
+      },
+    ]);
+    expect(pendencias.obrigatorias).toHaveLength(0);
+    expect(pendencias.opcionais).toHaveLength(0);
   });
 });

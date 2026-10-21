@@ -71,6 +71,9 @@ export const ACOES_AUDITORIA: Record<string, string> = {
   CONCLUIDO: 'Conclusão do processo',
   ANULADO: 'Anulação do processo',
   REVOGADO: 'Revogação do processo',
+  BLOQUEAR_ETAPA: 'Bloqueio de etapa',
+  DESBLOQUEAR_ETAPA: 'Desbloqueio de etapa',
+  PULAR_ETAPA: 'Pulo de etapa',
 };
 
 export const RECURSOS_AUDITORIA: Record<string, string> = {

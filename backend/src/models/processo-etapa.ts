@@ -38,6 +38,11 @@ export class ProcessoEtapa extends Model<
   declare dataPrevista: CreationOptional<Date | null>;
   declare dataConclusao: CreationOptional<Date | null>;
   declare motivoBloqueio: CreationOptional<string | null>;
+  declare condicional: CreationOptional<boolean>;
+  declare condicaoAplicabilidade: CreationOptional<string | null>;
+  declare permitePulo: CreationOptional<boolean>;
+  declare motivoPulo: CreationOptional<string | null>;
+  declare puladaEm: CreationOptional<Date | null>;
   declare createdAt: CreationOptional<Date>;
   declare updatedAt: CreationOptional<Date>;
 
@@ -85,6 +90,19 @@ ProcessoEtapa.init(
     dataPrevista: { type: DataTypes.DATE, allowNull: true },
     dataConclusao: { type: DataTypes.DATE, allowNull: true },
     motivoBloqueio: { type: DataTypes.TEXT, allowNull: true },
+    condicional: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    condicaoAplicabilidade: { type: DataTypes.TEXT, allowNull: true },
+    permitePulo: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
+    motivoPulo: { type: DataTypes.TEXT, allowNull: true },
+    puladaEm: { type: DataTypes.DATE, allowNull: true },
     createdAt: DataTypes.DATE,
     updatedAt: DataTypes.DATE,
   },
