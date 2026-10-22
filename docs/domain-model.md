@@ -72,7 +72,7 @@ Detalhes em `backend/database/migrations/`.
   O refresh token é rotacionado e armazenado somente como hash; a reutilização
   fora da janela concorrente revoga a sessão. A sessão pendente de MFA não recebe
   access token até a conclusão do segundo fator.
-- **Senhas:** hash bcrypt, mínimo de 12 caracteres e histórico das últimas 5
+- **Senhas:** hash bcrypt, mínimo de 8 caracteres e histórico das últimas 5
   senhas para impedir reutilização.
 - **MFA:** TOTP para contas com permissões administrativas. O segredo é
   criptografado com AES-256-GCM; os 10 códigos de recuperação são armazenados

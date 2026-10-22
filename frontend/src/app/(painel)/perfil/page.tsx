@@ -50,7 +50,7 @@ export default function PerfilPage() {
   const dadosAlterados =
     nome.trim() !== perfil.nome || email.trim() !== perfil.email;
   const senhasConferem =
-    novaSenha.length >= 12 && novaSenha === confirmacao;
+    novaSenha.length >= 8 && novaSenha === confirmacao;
   const podeAlterarSenha =
     !salvandoSenha &&
     senhaAtual.length > 0 &&
@@ -179,7 +179,7 @@ export default function PerfilPage() {
               rotulo="Nova senha"
               htmlFor="perfil-nova-senha"
               obrigatorio
-              dica="Mínimo de 12 caracteres."
+              dica="Mínimo de 8 caracteres."
             >
               <Entrada
                 id="perfil-nova-senha"

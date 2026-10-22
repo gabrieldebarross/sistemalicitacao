@@ -12,8 +12,9 @@
 ## Controles implementados
 
 - **Autenticação:** hash bcrypt (custo configurável, padrão 12); verificação de
-  usuário ativo; mensagens genéricas em falhas de credencial; rate limiting em
-  login, refresh e MFA; bloqueio após 5 falhas por 15 minutos (configurável);
+  usuário ativo; mensagens genéricas em falhas de credencial; rate limiting de
+  falhas de autenticação em login e MFA (refresh e respostas bem-sucedidas não
+  consomem tentativas); bloqueio após 5 falhas por 15 minutos (configurável);
   desbloqueio administrativo auditado.
 - **Sessão:** cookies `HttpOnly` (`sl_token`, `sl_refresh`) e `SameSite=Lax`,
   `Secure` em produção. Access token curto (padrão 15 min) com `sid`; refresh
@@ -34,7 +35,7 @@
   sem erro interno. O contador é incrementado de forma atômica; ao atingir o limite, o
   desafio é revogado, os cookies são limpos e o cliente retorna ao login. Reset
   administrativo exige outro administrador, revoga sessões e é auditado.
-- **Senhas:** mínimo de 12 caracteres, máximo de 128, histórico das últimas 5
+- **Senhas:** mínimo de 8 caracteres, máximo de 128, histórico das últimas 5
   senhas, troca obrigatória de senha provisória e redefinição administrativa com
   revogação de sessões.
 - **CSRF:** double-submit cookie (`sl_csrf` + header `x-csrf-token`) nas rotas

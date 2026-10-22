@@ -12,28 +12,34 @@ import {
 } from '../../src/schemas/index.js';
 
 describe('política de senha', () => {
-  it('exige no mínimo 12 caracteres', () => {
-    expect(env.password.minLength).toBeGreaterThanOrEqual(12);
+  it('exige no mínimo 8 caracteres', () => {
+    expect(env.password.minLength).toBeGreaterThanOrEqual(8);
     expect(() =>
       criarUsuarioSchema.parse({
         nome: 'Fulano',
         email: 'fulano@exemplo.gov.br',
-        senha: 'a'.repeat(11),
+        senha: 'a'.repeat(7),
       }),
     ).toThrow();
     expect(
       criarUsuarioSchema.parse({
         nome: 'Fulano',
         email: 'fulano@exemplo.gov.br',
-        senha: 'a'.repeat(12),
+        senha: 'a'.repeat(8),
       }).senha,
-    ).toHaveLength(12);
+    ).toHaveLength(8);
     expect(() =>
       alterarSenhaSchema.parse({
         senhaAtual: 'atual',
-        novaSenha: 'a'.repeat(11),
+        novaSenha: 'a'.repeat(7),
       }),
     ).toThrow();
+    expect(
+      alterarSenhaSchema.parse({
+        senhaAtual: 'atual',
+        novaSenha: 'a'.repeat(8),
+      }).novaSenha,
+    ).toHaveLength(8);
   });
 });
 

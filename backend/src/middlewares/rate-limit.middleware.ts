@@ -8,31 +8,46 @@ interface Registro {
 }
 
 const JANELA_MS = 15 * 60 * 1000;
-const MAX_TENTATIVAS = 10;
+const MAX_FALHAS = 10;
 
-const tentativas = new Map<string, Registro>();
+const falhas = new Map<string, Registro>();
 
-/** Limita tentativas de login por IP (proteção básica contra brute force). */
+/**
+ * Limita tentativas de autenticação malsucedidas por IP. Requisições
+ * bem-sucedidas e respostas de validação não consomem o limite.
+ */
 export function limitarLogin(
   req: Request,
-  _res: Response,
+  res: Response,
   next: NextFunction,
 ): void {
   const chave = req.ip ?? 'desconhecido';
   const agora = Date.now();
-  const registro = tentativas.get(chave);
+  const registro = falhas.get(chave);
 
-  if (!registro || registro.expiraEm <= agora) {
-    tentativas.set(chave, { contagem: 1, expiraEm: agora + JANELA_MS });
-    next();
-    return;
+  if (registro && registro.expiraEm <= agora) {
+    falhas.delete(chave);
   }
 
-  if (registro.contagem >= MAX_TENTATIVAS) {
+  const atual = falhas.get(chave);
+  if (atual && atual.contagem >= MAX_FALHAS) {
     next(new RateLimitError());
     return;
   }
 
-  registro.contagem += 1;
+  res.on('finish', () => {
+    if (res.statusCode !== 401) {
+      return;
+    }
+
+    const momento = Date.now();
+    const registroFinal = falhas.get(chave);
+    if (!registroFinal || registroFinal.expiraEm <= momento) {
+      falhas.set(chave, { contagem: 1, expiraEm: momento + JANELA_MS });
+      return;
+    }
+    registroFinal.contagem += 1;
+  });
+
   next();
 }

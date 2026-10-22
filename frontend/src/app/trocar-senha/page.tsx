@@ -44,7 +44,7 @@ export default function TrocarSenhaPage() {
   }
 
   const senhasConferem =
-    novaSenha.length >= 12 && novaSenha === confirmacao;
+    novaSenha.length >= 8 && novaSenha === confirmacao;
   const podeEnviar =
     !enviando && senhaAtual.length > 0 && senhasConferem;
 
@@ -111,7 +111,7 @@ export default function TrocarSenhaPage() {
               rotulo="Nova senha"
               htmlFor="nova-senha"
               obrigatorio
-              dica="Mínimo de 12 caracteres."
+              dica="Mínimo de 8 caracteres."
             >
               <Entrada
                 id="nova-senha"

@@ -551,8 +551,8 @@ export default function UsuariosPage() {
                 salvando ||
                 !form?.nome.trim() ||
                 !form?.email.trim() ||
-                (!form?.id && form.senha.length < 12) ||
-                (!!form?.id && form.senha.length > 0 && form.senha.length < 12)
+                (!form?.id && form.senha.length < 8) ||
+                (!!form?.id && form.senha.length > 0 && form.senha.length < 8)
               }
               onClick={salvar}
             >
@@ -587,7 +587,7 @@ export default function UsuariosPage() {
                 rotulo="Senha"
                 htmlFor="usuario-senha"
                 obrigatorio
-                dica="Mínimo de 12 caracteres. O usuário deverá alterá-la no primeiro acesso."
+                dica="Mínimo de 8 caracteres. O usuário deverá alterá-la no primeiro acesso."
               >
                 <Entrada
                   id="usuario-senha"
@@ -603,7 +603,7 @@ export default function UsuariosPage() {
               <Campo
                 rotulo="Redefinir senha (opcional)"
                 htmlFor="usuario-senha"
-                dica="Mínimo de 12 caracteres. Ao redefinir, o usuário deverá alterá-la no próximo acesso e todas as sessões serão encerradas."
+                dica="Mínimo de 8 caracteres. Ao redefinir, o usuário deverá alterá-la no próximo acesso e todas as sessões serão encerradas."
               >
                 <Entrada
                   id="usuario-senha"

@@ -35,7 +35,7 @@ const envSchema = z.object({
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   BCRYPT_SALT_ROUNDS: z.coerce.number().int().min(10).max(15).default(12),
 
-  PASSWORD_MIN_LENGTH: z.coerce.number().int().min(8).max(128).default(12),
+  PASSWORD_MIN_LENGTH: z.coerce.number().int().min(8).max(128).default(8),
   PASSWORD_HISTORY_SIZE: z.coerce.number().int().min(1).max(20).default(5),
   LOGIN_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(20).default(5),
   LOGIN_LOCK_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),

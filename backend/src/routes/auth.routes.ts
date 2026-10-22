@@ -8,7 +8,7 @@ import { limitarLogin } from '../middlewares/rate-limit.middleware.js';
 export const authRouter: Router = Router();
 
 authRouter.post('/login', limitarLogin, controller.login);
-authRouter.post('/refresh', limitarLogin, controller.refresh);
+authRouter.post('/refresh', controller.refresh);
 authRouter.post('/logout', controller.logout);
 authRouter.get('/me', autenticar, controller.me);
 authRouter.patch(
