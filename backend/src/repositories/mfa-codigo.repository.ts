@@ -13,12 +13,12 @@ export async function criarVarios(
   );
 }
 
-export async function buscarNaoUsadoPorHash(
+export async function buscarPorHash(
   usuarioId: number,
   codigoHash: string,
 ): Promise<MfaCodigoRecuperacao | null> {
   return MfaCodigoRecuperacao.findOne({
-    where: { usuarioId, codigoHash, usadoEm: null },
+    where: { usuarioId, codigoHash },
   });
 }
 

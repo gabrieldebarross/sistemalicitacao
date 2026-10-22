@@ -305,7 +305,7 @@ export default function LoginPage() {
                 rotulo="Código de verificação"
                 htmlFor="mfa-codigo"
                 obrigatorio
-                dica="Aceita de 4 a 8 dígitos do aplicativo ou um código de recuperação."
+                dica="Aceita de 4 a 8 dígitos do aplicativo ou um código de recuperação. Cada código de recuperação pode ser usado uma única vez."
               >
                 <Entrada
                   id="mfa-codigo"

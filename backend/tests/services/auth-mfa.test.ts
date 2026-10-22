@@ -92,6 +92,22 @@ describe('limite de tentativas do desafio de MFA', () => {
     expect(sessaoService.revogarSessao).not.toHaveBeenCalled();
   });
 
+  it('informa quando o código de recuperação já foi utilizado', async () => {
+    repositorioSessao.buscarPorId.mockResolvedValue(desafio(0));
+    repositorioSessao.incrementarTentativasMfa.mockResolvedValue(1);
+    mfaService.verificarCodigo.mockResolvedValue('RECUPERACAO_JA_USADA');
+
+    await expect(
+      verificarDesafioMfa('sessao-1', 10, 'BC149-3084F', contexto),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('já foi utilizado'),
+    });
+    expect(repositorioSessao.incrementarTentativasMfa).toHaveBeenCalledWith(
+      'sessao-1',
+    );
+    expect(sessaoService.revogarSessao).not.toHaveBeenCalled();
+  });
+
   it('recusa desafio expirado com código próprio de encerramento', async () => {
     repositorioSessao.buscarPorId.mockResolvedValue({
       ...desafio(0),

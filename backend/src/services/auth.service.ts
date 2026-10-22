@@ -397,20 +397,30 @@ export async function verificarDesafioMfa(
     );
   }
   const tipo = await mfaService.verificarCodigo(usuario.usuario, codigo);
-  if (!tipo) {
+  if (!tipo || tipo === 'RECUPERACAO_JA_USADA') {
     const tentativas = await sessaoRepo.incrementarTentativasMfa(sessao.id);
     sessao.mfaTentativas = tentativas;
+    const codigoJaUtilizado = tipo === 'RECUPERACAO_JA_USADA';
     await auditoria.registrar(contexto, {
       acao: 'LOGIN_MFA',
       recurso: 'sessao',
       recursoId: usuarioId,
       resultado: 'FALHA',
-      metadados: { motivo: 'CODIGO_INVALIDO' },
+      metadados: {
+        motivo: codigoJaUtilizado
+          ? 'CODIGO_RECUPERACAO_USADO'
+          : 'CODIGO_INVALIDO',
+      },
     });
     if (tentativas >= MFA_MAX_TENTATIVAS) {
       await sessaoService.revogarSessao(sessao.id);
       throw new MfaChallengeError(
         'Muitas tentativas de verificação. Faça login novamente.',
+      );
+    }
+    if (codigoJaUtilizado) {
+      throw new AuthenticationError(
+        'Este código de recuperação já foi utilizado. Use outro código de recuperação ou o aplicativo autenticador.',
       );
     }
     throw new AuthenticationError('Código de verificação inválido.');

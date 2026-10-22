@@ -135,7 +135,7 @@ export async function confirmarConfiguracao(
 export async function verificarCodigo(
   usuario: Usuario,
   codigo: string,
-): Promise<'TOTP' | 'RECUPERACAO' | null> {
+): Promise<'TOTP' | 'RECUPERACAO' | 'RECUPERACAO_JA_USADA' | null> {
   const normalizado = normalizarCodigo(codigo);
   if (usuario.mfaAtivo && usuario.mfaSegredoCriptografado) {
     const segredo = descriptografarSegredo(
@@ -147,12 +147,15 @@ export async function verificarCodigo(
   }
 
   const hash = hashToken(normalizado);
-  const registro = await codigoRepo.buscarNaoUsadoPorHash(usuario.id, hash);
+  const registro = await codigoRepo.buscarPorHash(usuario.id, hash);
   if (!registro) {
     return null;
   }
+  if (registro.usadoEm !== null) {
+    return 'RECUPERACAO_JA_USADA';
+  }
   const afetadas = await codigoRepo.marcarUsado(registro.id);
-  return afetadas > 0 ? 'RECUPERACAO' : null;
+  return afetadas > 0 ? 'RECUPERACAO' : 'RECUPERACAO_JA_USADA';
 }
 
 export async function resetarMfa(usuario: Usuario): Promise<void> {
