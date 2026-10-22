@@ -209,7 +209,7 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
     return (
       <nav
         className={cn(
-          'flex flex-1 flex-col gap-4 overflow-y-auto py-4',
+          'rolagem-sutil flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overflow-x-hidden overscroll-contain py-4',
           compacta ? 'px-2' : 'px-3',
         )}
         aria-label="Navegação principal"
@@ -289,25 +289,29 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
           recolhido ? 'w-[4.75rem]' : 'w-[17rem]',
         )}
       >
+        <button
+          type="button"
+          onClick={alternarMenuLateral}
+          aria-label={recolhido ? 'Expandir menu lateral' : 'Recolher menu lateral'}
+          aria-expanded={!recolhido}
+          aria-controls="menu-lateral"
+          title={recolhido ? 'Expandir menu' : 'Recolher menu'}
+          className="absolute -right-3.5 top-4 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-linha-300 bg-white text-tinta-700 shadow-md transition-colors hover:border-rota-600 hover:bg-papel-50 hover:text-rota-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rota-600 focus-visible:ring-offset-2"
+        >
+          {recolhido ? (
+            <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+          )}
+        </button>
+
         <div
           className={cn(
             'flex h-[4.5rem] shrink-0 items-center border-b border-white/10',
-            recolhido ? 'justify-center px-2' : 'justify-between px-4',
+            recolhido ? 'justify-center px-2' : 'px-4',
           )}
         >
           <MarcaTramitaY compacta={recolhido} />
-          {!recolhido ? (
-            <button
-              type="button"
-              onClick={alternarMenuLateral}
-              aria-label="Recolher menu lateral"
-              aria-expanded="true"
-              aria-controls="menu-lateral"
-              className="rounded-lg p-1.5 text-rota-200 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sinal-300"
-            >
-              <PanelLeftClose className="h-[1.15rem] w-[1.15rem]" aria-hidden="true" />
-            </button>
-          ) : null}
         </div>
 
         {navegacao(recolhido)}
@@ -318,23 +322,11 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
             recolhido ? 'flex flex-col items-center gap-2 px-2 py-3' : 'p-3',
           )}
         >
-          {recolhido ? (
-            <button
-              type="button"
-              onClick={alternarMenuLateral}
-              aria-label="Expandir menu lateral"
-              aria-expanded="false"
-              aria-controls="menu-lateral"
-              className="rounded-lg p-2 text-rota-200 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sinal-300"
-              title="Expandir menu"
-            >
-              <PanelLeftOpen className="h-[1.15rem] w-[1.15rem]" aria-hidden="true" />
-            </button>
-          ) : (
+          {!recolhido ? (
             <p className="px-2 text-[0.62rem] font-medium uppercase tracking-[0.12em] text-rota-300">
               Sessão institucional
             </p>
-          )}
+          ) : null}
           <div
             className={cn(
               'mt-2 flex items-center gap-2.5',

@@ -60,12 +60,29 @@ body {
 }
 
 body {
+  overflow-x: clip;
   background-color: var(--color-papel-50);
   color: var(--color-tinta-900);
   font-family: var(--font-sans);
   font-feature-settings: "kern", "liga", "tnum";
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+}
+
+/* Rolagem discreta para a navegação lateral, sem esconder o controle. */
+.rolagem-sutil {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(119 189 176 / 0.45) transparent;
+}
+
+.rolagem-sutil::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.rolagem-sutil::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: rgb(119 189 176 / 0.4);
 }
 
 ::selection {

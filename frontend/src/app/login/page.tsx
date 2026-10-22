@@ -135,7 +135,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-papel-50 lg:grid lg:grid-cols-[minmax(0,1.05fr)_minmax(28rem,0.95fr)]">
+    <div className="min-h-dvh overflow-x-hidden bg-papel-50 lg:grid lg:h-dvh lg:min-h-0 lg:grid-cols-[minmax(0,1.05fr)_minmax(28rem,0.95fr)] lg:overflow-hidden">
       <aside className="relative hidden overflow-hidden bg-tinta-950 p-10 text-white lg:flex lg:flex-col xl:p-14">
         <div className="fundo-malha absolute inset-0 opacity-70" aria-hidden="true" />
         <svg
@@ -163,7 +163,7 @@ export default function LoginPage() {
           <MarcaTramitaY />
         </div>
 
-        <div className="relative z-10 my-auto max-w-lg py-16">
+        <div className="relative z-10 my-auto max-w-lg py-10 xl:py-14">
           <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.14em] text-rota-100">
             <span className="h-1.5 w-1.5 rounded-full bg-sinal-400" aria-hidden="true" />
             Gestão pública em movimento
@@ -177,7 +177,7 @@ export default function LoginPage() {
             rotina de licitações exige.
           </p>
 
-          <ol className="mt-12 space-y-5 border-l border-white/15 pl-6">
+          <ol className="mt-10 space-y-4 border-l border-white/15 pl-6">
             {[
               ['01', 'Fluxo visível', 'Cada etapa, prazo e responsável no lugar certo.'],
               ['02', 'Acesso controlado', 'Permissões explícitas por papel e por setor.'],
@@ -204,14 +204,11 @@ export default function LoginPage() {
           </ol>
         </div>
 
-        <p className="relative z-10 text-xs text-rota-200/80">
-          Uso institucional · Autarquia municipal
-        </p>
       </aside>
 
-      <main className="flex min-h-screen flex-col justify-center px-5 py-8 sm:px-10 lg:px-14">
+      <main className="flex min-h-dvh flex-col justify-center px-5 py-8 sm:px-10 lg:min-h-0 lg:px-14 lg:py-10">
         <div className="mx-auto w-full max-w-md">
-          <div className="mb-9 lg:hidden">
+          <div className="mb-7 lg:hidden">
             <MarcaTramitaY tema="claro" />
           </div>
 
@@ -304,14 +301,19 @@ export default function LoginPage() {
           {etapa === 'mfa' ? (
             <form onSubmit={submeterMfa} className="flex flex-col gap-4">
               {erro ? <AlertaErro mensagem={erro} /> : null}
-              <Campo rotulo="Código de verificação" htmlFor="mfa-codigo" obrigatorio>
+              <Campo
+                rotulo="Código de verificação"
+                htmlFor="mfa-codigo"
+                obrigatorio
+                dica="Aceita de 4 a 8 dígitos do aplicativo ou um código de recuperação."
+              >
                 <Entrada
                   id="mfa-codigo"
                   inputMode="numeric"
                   autoComplete="one-time-code"
                   autoFocus
                   required
-                  maxLength={32}
+                  maxLength={16}
                   className="tabular text-center text-lg tracking-[0.3em]"
                   value={codigo}
                   onChange={(evento) => setCodigo(evento.target.value)}
@@ -354,6 +356,7 @@ export default function LoginPage() {
                 rotulo="Código gerado pelo aplicativo"
                 htmlFor="mfa-config-codigo"
                 obrigatorio
+                dica="Digite de 4 a 8 dígitos, conforme o aplicativo autenticador."
               >
                 <Entrada
                   id="mfa-config-codigo"
@@ -361,6 +364,7 @@ export default function LoginPage() {
                   autoComplete="one-time-code"
                   autoFocus
                   required
+                  maxLength={8}
                   className="tabular text-center text-lg tracking-[0.3em]"
                   value={codigo}
                   onChange={(evento) => setCodigo(evento.target.value)}
@@ -392,7 +396,7 @@ export default function LoginPage() {
             </>
           ) : null}
 
-          <p className="mt-9 border-t border-linha-200 pt-4 text-[0.68rem] leading-relaxed text-tinta-500">
+          <p className="mt-7 border-t border-linha-200 pt-4 text-[0.68rem] leading-relaxed text-tinta-500">
             Acesso restrito a servidores autorizados. Todas as operações são
             registradas para auditoria.
           </p>

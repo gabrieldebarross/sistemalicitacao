@@ -16,6 +16,7 @@ import {
   EstadoVazio,
   Modal,
   Selecao,
+  cn,
 } from '@/components/ui';
 import { api, mensagemDeErro, TAMANHO_PAGINA_MAX, type Paginacao } from '@/lib/api';
 import { formatarDataHora } from '@/lib/format';
@@ -58,7 +59,8 @@ export default function UsuariosPage() {
   const [itens, setItens] = useState<Usuario[]>([]);
   const [cargos, setCargos] = useState<Cargo[]>([]);
   const [setores, setSetores] = useState<Setor[]>([]);
-  const [papels, setPapels] = useState<Papel[]>([]);
+  const [papels, setPapels] = useState<Papel[] | null>(null);
+  const [carregandoPapels, setCarregandoPapels] = useState(false);
   const [paginacao, setPaginacao] = useState<Paginacao | null>(null);
   const [busca, setBusca] = useState('');
   const [pagina, setPagina] = useState(1);
@@ -117,13 +119,7 @@ export default function UsuariosPage() {
         .then((r) => setSetores(r.dados))
         .catch(() => setSetores([]));
     }
-    if (podeGerenciarRoles) {
-      api
-        .get<Papel[]>('/roles')
-        .then((r) => setPapels(r.dados))
-        .catch(() => setPapels([]));
-    }
-  }, [podeEditar, podeGerenciarRoles]);
+  }, [podeEditar]);
 
   function abrirNovo() {
     setForm({ ...VAZIO });
@@ -279,12 +275,31 @@ export default function UsuariosPage() {
     }
   }
 
-  function abrirRoles(usuario: Usuario) {
-    const nomes = new Set(usuario.roles);
-    setRolesSelecionados(
-      papels.filter((papel) => nomes.has(papel.nome)).map((papel) => papel.id),
-    );
+  async function abrirRoles(usuario: Usuario) {
     setRolesUsuario(usuario);
+    setRolesSelecionados([]);
+    const nomes = new Set(usuario.roles);
+    if (papels !== null) {
+      setRolesSelecionados(
+        papels.filter((papel) => nomes.has(papel.nome)).map((papel) => papel.id),
+      );
+      return;
+    }
+    setCarregandoPapels(true);
+    setErro('');
+    try {
+      const resposta = await api.get<Papel[]>('/roles');
+      setPapels(resposta.dados);
+      setRolesSelecionados(
+        resposta.dados
+          .filter((papel) => nomes.has(papel.nome))
+          .map((papel) => papel.id),
+      );
+    } catch (falha) {
+      setErro(mensagemDeErro(falha));
+    } finally {
+      setCarregandoPapels(false);
+    }
   }
 
   function abrirSetores(usuario: Usuario) {
@@ -376,7 +391,7 @@ export default function UsuariosPage() {
           <EstadoVazio titulo="Nenhum usuário encontrado" />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full min-w-[68rem] text-left text-sm">
               <thead className="border-b border-linha-200 text-xs uppercase text-tinta-500">
                 <tr>
                   <th className="px-4 py-2">Nome</th>
@@ -390,7 +405,13 @@ export default function UsuariosPage() {
               </thead>
               <tbody className="divide-y divide-papel-100">
                 {itens.map((usuario) => (
-                  <tr key={usuario.id} className="hover:bg-papel-50">
+                  <tr
+                    key={usuario.id}
+                    className={cn(
+                      'hover:bg-papel-50',
+                      !usuario.ativo && 'bg-papel-100/50',
+                    )}
+                  >
                     <td className="px-4 py-3 font-medium text-tinta-800">
                       {usuario.nome}
                     </td>
@@ -411,16 +432,17 @@ export default function UsuariosPage() {
                     <td className="px-4 py-3 text-tinta-600">
                       {usuario.roles.length > 0 ? usuario.roles.join(', ') : '—'}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="whitespace-nowrap px-4 py-3">
                       <Etiqueta tom={usuario.ativo ? 'sucesso' : 'neutro'}>
                         {usuario.ativo ? 'Ativo' : 'Inativo'}
                       </Etiqueta>
                     </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
+                    <td className="min-w-[24rem] px-4 py-3">
+                      <div className="flex flex-wrap items-center justify-end gap-1.5">
                         {podeEditar ? (
                           <Botao
                             variante="secundario"
+                            className="whitespace-nowrap px-2.5 py-1 text-xs"
                             onClick={() => abrirSetores(usuario)}
                           >
                             Setores
@@ -429,6 +451,7 @@ export default function UsuariosPage() {
                         {podeGerenciarRoles ? (
                           <Botao
                             variante="secundario"
+                            className="whitespace-nowrap px-2.5 py-1 text-xs"
                             onClick={() => abrirRoles(usuario)}
                           >
                             Papéis
@@ -437,6 +460,7 @@ export default function UsuariosPage() {
                         {podeEditar ? (
                           <Botao
                             variante="secundario"
+                            className="whitespace-nowrap px-2.5 py-1 text-xs"
                             onClick={() => abrirSessoes(usuario)}
                           >
                             Sessões
@@ -445,6 +469,7 @@ export default function UsuariosPage() {
                         {podeEditar ? (
                           <Botao
                             variante="secundario"
+                            className="whitespace-nowrap px-2.5 py-1 text-xs"
                             disabled={processandoAcao}
                             onClick={() => desbloquear(usuario)}
                           >
@@ -454,6 +479,7 @@ export default function UsuariosPage() {
                         {podeEditar ? (
                           <Botao
                             variante="secundario"
+                            className="whitespace-nowrap px-2.5 py-1 text-xs"
                             onClick={() => setResetandoMfa(usuario)}
                           >
                             Resetar MFA
@@ -462,6 +488,7 @@ export default function UsuariosPage() {
                         {podeEditar ? (
                           <Botao
                             variante="secundario"
+                            className="whitespace-nowrap px-2.5 py-1 text-xs"
                             onClick={() => abrirEdicao(usuario)}
                           >
                             Editar
@@ -470,6 +497,7 @@ export default function UsuariosPage() {
                         {podeDesativar && usuario.ativo ? (
                           <Botao
                             variante="perigo"
+                            className="whitespace-nowrap px-2.5 py-1 text-xs"
                             onClick={() => abrirDesativar(usuario)}
                           >
                             Desativar
@@ -644,7 +672,9 @@ export default function UsuariosPage() {
           Selecione os papéis do usuário. Cada papel concede as permissões
           listadas.
         </p>
-        {papels.length === 0 ? (
+        {carregandoPapels ? (
+          <Carregando texto="Carregando papéis…" />
+        ) : papels === null || papels.length === 0 ? (
           <p className="text-sm text-tinta-500">Nenhum papel cadastrado.</p>
         ) : (
           <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto pr-1">

@@ -52,7 +52,11 @@ export const alterarSenhaSchema = z.object({
 });
 
 export const mfaCodigoSchema = z.object({
-  codigo: z.string().trim().min(6, 'Informe o código.').max(32),
+  codigo: z
+    .string()
+    .trim()
+    .min(4, 'Informe um código de 4 a 8 dígitos ou um código de recuperação.')
+    .max(64, 'O código informado é muito longo.'),
 });
 
 export const atualizarPerfilSchema = z

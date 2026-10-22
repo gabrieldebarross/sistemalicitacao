@@ -1,8 +1,13 @@
+import { generate, generateSecret } from 'otplib';
 import { describe, expect, it } from 'vitest';
 
 import { PERMISSIONS } from '../../src/domain/permissions.js';
 import type { Usuario } from '../../src/models/usuario.js';
-import { exigeMfa, precisaVerificarMfa } from '../../src/services/mfa.service.js';
+import {
+  exigeMfa,
+  precisaVerificarMfa,
+  verificarCodigoTotp,
+} from '../../src/services/mfa.service.js';
 
 function usuario(mfaAtivo: boolean): Usuario {
   return { mfaAtivo } as Usuario;
@@ -35,5 +40,27 @@ describe('obrigatoriedade de MFA', () => {
         new Set([PERMISSIONS.USUARIOS_UPDATE]),
       ),
     ).toBe(true);
+  });
+});
+
+describe('código TOTP', () => {
+  it('aceita códigos de 4 a 8 dígitos sem lançar erro interno', async () => {
+    const segredo = generateSecret();
+    for (const digitos of [4, 5, 6, 7, 8]) {
+      const token = await generate({ secret: segredo, digits: digitos });
+      expect(token).toHaveLength(digitos);
+      await expect(verificarCodigoTotp(segredo, token)).resolves.toBe(true);
+    }
+  });
+
+  it('trata códigos fora do intervalo como inválidos', async () => {
+    const segredo = generateSecret();
+    await expect(verificarCodigoTotp(segredo, '123')).resolves.toBe(false);
+    await expect(verificarCodigoTotp(segredo, '123456789')).resolves.toBe(
+      false,
+    );
+    await expect(verificarCodigoTotp(segredo, 'ABCDE-12345')).resolves.toBe(
+      false,
+    );
   });
 });

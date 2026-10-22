@@ -40,6 +40,32 @@ function normalizarCodigo(codigo: string): string {
   return codigo.replace(/[^a-z0-9]/gi, '').toUpperCase();
 }
 
+/**
+ * Verifica um token TOTP aceitando de 4 a 8 dígitos, conforme o aplicativo
+ * autenticador. Tokens com outro formato (inclusive códigos de recuperação)
+ * são tratados como inválidos, sem propagar erros internos da biblioteca.
+ */
+export async function verificarCodigoTotp(
+  segredo: string,
+  codigo: string,
+): Promise<boolean> {
+  const token = normalizarCodigo(codigo);
+  if (!/^\d{4,8}$/.test(token)) {
+    return false;
+  }
+  try {
+    const resultado = await verify({
+      token,
+      secret: segredo,
+      epochTolerance: 30,
+      digits: token.length,
+    });
+    return resultado.valid;
+  } catch {
+    return false;
+  }
+}
+
 function codigoRecuperacao(): string {
   return randomBytes(5).toString('hex').toUpperCase();
 }
@@ -84,12 +110,7 @@ export async function confirmarConfiguracao(
   const segredo = descriptografarSegredo(
     usuario.mfaSegredoCriptografado,
   );
-  const resultado = await verify({
-    token: normalizarCodigo(codigo),
-    secret: segredo,
-    epochTolerance: 30,
-  });
-  if (!resultado.valid) {
+  if (!(await verificarCodigoTotp(segredo, codigo))) {
     throw new ValidationError('Código de verificação inválido.');
   }
 
@@ -120,12 +141,7 @@ export async function verificarCodigo(
     const segredo = descriptografarSegredo(
       usuario.mfaSegredoCriptografado,
     );
-    const resultado = await verify({
-      token: normalizado,
-      secret: segredo,
-      epochTolerance: 30,
-    });
-    if (resultado.valid) {
+    if (await verificarCodigoTotp(segredo, normalizado)) {
       return 'TOTP';
     }
   }

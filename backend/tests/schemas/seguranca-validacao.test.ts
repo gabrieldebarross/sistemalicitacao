@@ -54,6 +54,12 @@ describe('código MFA', () => {
     ).toBe('ABCDE-12345');
   });
 
+  it('aceita códigos TOTP de 4 a 8 dígitos', () => {
+    for (const codigo of ['1234', '12345', '123456', '1234567', '12345678']) {
+      expect(mfaCodigoSchema.parse({ codigo }).codigo).toBe(codigo);
+    }
+  });
+
   it('rejeita código curto', () => {
     expect(() => mfaCodigoSchema.parse({ codigo: '123' })).toThrow();
   });

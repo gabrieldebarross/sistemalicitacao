@@ -29,7 +29,9 @@
   único, armazenados como hash. O segredo TOTP é criptografado com AES-256-GCM
   usando `MFA_ENCRYPTION_KEY` (32 bytes em hex, base64 ou texto). O desafio de
   MFA é uma sessão pendente de 10 minutos, sem access token, limitada a 5
-  tentativas. O contador é incrementado de forma atômica; ao atingir o limite, o
+  tentativas. São aceitos códigos TOTP de 4 a 8 dígitos, conforme o aplicativo
+  autenticador; formatos fora desse intervalo são tratados como código inválido,
+  sem erro interno. O contador é incrementado de forma atômica; ao atingir o limite, o
   desafio é revogado, os cookies são limpos e o cliente retorna ao login. Reset
   administrativo exige outro administrador, revoga sessões e é auditado.
 - **Senhas:** mínimo de 12 caracteres, máximo de 128, histórico das últimas 5
