@@ -50,6 +50,7 @@ export const ROTULOS_SITUACAO_FLUXO: Record<string, string> = {
 
 export const ROTULOS_MOVIMENTACAO: Record<string, string> = {
   CRIACAO: 'Criação',
+  INICIO_PROCESSO: 'Início do processo',
   INICIO_ETAPA: 'Início de etapa',
   CONCLUSAO_ETAPA: 'Conclusão de etapa',
   CONCLUSAO_PROCESSO: 'Conclusão do processo',

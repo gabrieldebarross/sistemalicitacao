@@ -49,6 +49,14 @@ const VAZIO: Formulario = {
   ativo: true,
 };
 
+function estaBloqueado(usuario: Usuario): boolean {
+  if (!usuario.bloqueadoAte) {
+    return false;
+  }
+  const bloqueadoAte = new Date(usuario.bloqueadoAte).getTime();
+  return Number.isFinite(bloqueadoAte) && bloqueadoAte > Date.now();
+}
+
 export default function UsuariosPage() {
   const { temPermissao } = useSessao();
   const podeCriar = temPermissao('usuarios.create');
@@ -248,7 +256,14 @@ export default function UsuariosPage() {
     setErro('');
     setSucesso('');
     try {
-      await api.post(`/usuarios/${usuario.id}/desbloquear`);
+      const resposta = await api.post<Usuario>(
+        `/usuarios/${usuario.id}/desbloquear`,
+      );
+      setItens((atual) =>
+        atual.map((item) =>
+          item.id === usuario.id ? resposta.dados : item,
+        ),
+      );
       setSucesso('Tentativas de login zeradas e bloqueio removido.');
     } catch (falha) {
       setErro(mensagemDeErro(falha));
@@ -433,9 +448,14 @@ export default function UsuariosPage() {
                       {usuario.roles.length > 0 ? usuario.roles.join(', ') : '—'}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
-                      <Etiqueta tom={usuario.ativo ? 'sucesso' : 'neutro'}>
-                        {usuario.ativo ? 'Ativo' : 'Inativo'}
-                      </Etiqueta>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Etiqueta tom={usuario.ativo ? 'sucesso' : 'neutro'}>
+                          {usuario.ativo ? 'Ativo' : 'Inativo'}
+                        </Etiqueta>
+                        {estaBloqueado(usuario) ? (
+                          <Etiqueta tom="alerta">Bloqueado</Etiqueta>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="min-w-[24rem] px-4 py-3">
                       <div className="flex flex-wrap items-center justify-end gap-1.5">
@@ -466,7 +486,7 @@ export default function UsuariosPage() {
                             Sessões
                           </Botao>
                         ) : null}
-                        {podeEditar ? (
+                        {podeEditar && estaBloqueado(usuario) ? (
                           <Botao
                             variante="secundario"
                             className="whitespace-nowrap px-2.5 py-1 text-xs"

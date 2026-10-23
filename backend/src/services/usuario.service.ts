@@ -35,6 +35,7 @@ export interface UsuarioDTO {
   nome: string;
   email: string;
   ativo: boolean;
+  bloqueadoAte: Date | null;
   cargo: { id: number; nome: string } | null;
   roles: string[];
   setores: SetorUsuarioDTO[];
@@ -80,6 +81,7 @@ function toDTO(
     nome: usuario.nome,
     email: usuario.email,
     ativo: usuario.ativo,
+    bloqueadoAte: usuario.bloqueadoAte,
     cargo: usuario.cargo
       ? { id: usuario.cargo.id, nome: usuario.cargo.nome }
       : null,

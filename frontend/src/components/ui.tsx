@@ -2,6 +2,7 @@
 
 import {
   CheckCircle2,
+  ChevronDown,
   CircleAlert,
   Inbox,
   Loader2,
@@ -117,12 +118,24 @@ export function AreaTexto(props: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   );
 }
 
-export function Selecao(props: SelectHTMLAttributes<HTMLSelectElement>) {
+export function Selecao({
+  className,
+  ...props
+}: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
-    <select
-      {...props}
-      className={cn(BASE_CAMPO, 'cursor-pointer pr-9', props.className)}
-    />
+    <div className={cn('relative min-w-0', className)}>
+      <select
+        {...props}
+        className={cn(
+          BASE_CAMPO,
+          'peer cursor-pointer appearance-none pr-10 transition-colors',
+        )}
+      />
+      <ChevronDown
+        className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-tinta-500 transition-colors peer-focus:text-rota-700 peer-disabled:text-tinta-400"
+        aria-hidden="true"
+      />
+    </div>
   );
 }
 

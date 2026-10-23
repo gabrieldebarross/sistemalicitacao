@@ -61,7 +61,6 @@ export interface ProcessoDetalhe extends ProcessoResumo {
   descricao: string | null;
   fluxo: { id: number; nome: string; versao: number } | null;
   etapas: ProcessoEtapa[];
-  movimentacoes: Movimentacao[];
 }
 
 export interface EtapaFluxo {
@@ -160,6 +159,7 @@ export interface Usuario {
   nome: string;
   email: string;
   ativo: boolean;
+  bloqueadoAte: string | null;
   cargo: Referencia | null;
   roles: string[];
   setores: SetorUsuario[];

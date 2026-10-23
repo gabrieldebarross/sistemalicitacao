@@ -47,6 +47,7 @@ Movimentacao.init(
     tipo: {
       type: DataTypes.ENUM(
         'CRIACAO',
+        'INICIO_PROCESSO',
         'INICIO_ETAPA',
         'CONCLUSAO_ETAPA',
         'CONCLUSAO_PROCESSO',

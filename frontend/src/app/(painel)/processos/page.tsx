@@ -435,24 +435,32 @@ export default function ProcessosPage() {
             </div>
           </div>
 
-          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-linha-200 pt-4">
-            <span className="flex items-center gap-1.5 text-sm font-semibold text-tinta-800">
-              <Bookmark className="h-4 w-4 text-tinta-500" aria-hidden="true" />
-              Visões salvas
-            </span>
-            <Selecao
-              aria-label="Aplicar visão salva"
-              value={visaoSelecionada}
-              onChange={(evento) => aplicarVisao(evento.target.value)}
-              className="w-full max-w-xs"
-            >
-              <option value="">Selecione uma visão</option>
-              {visoes.map((visao) => (
-                <option key={visao.id} value={visao.id}>
-                  {visao.nome}
-                </option>
-              ))}
-            </Selecao>
+          <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-linha-200 pt-4">
+            <div className="w-full sm:max-w-sm">
+              <label
+                htmlFor="filtro-visao"
+                className="mb-1.5 flex items-center gap-1.5 text-[0.8rem] font-semibold tracking-wide text-tinta-800"
+              >
+                <Bookmark
+                  className="h-4 w-4 text-tinta-500"
+                  aria-hidden="true"
+                />
+                Visões salvas
+              </label>
+              <Selecao
+                id="filtro-visao"
+                value={visaoSelecionada}
+                onChange={(evento) => aplicarVisao(evento.target.value)}
+                className="w-full"
+              >
+                <option value="">Selecione uma visão salva</option>
+                {visoes.map((visao) => (
+                  <option key={visao.id} value={visao.id}>
+                    {visao.nome}
+                  </option>
+                ))}
+              </Selecao>
+            </div>
             <Botao
               variante="secundario"
               onClick={() => {

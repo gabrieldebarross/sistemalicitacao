@@ -1,7 +1,10 @@
 import { z } from 'zod';
 
 import { env } from '../config/env.js';
-import { paginacaoSchema } from '../utils/pagination.js';
+import {
+  MAX_PAGE_SIZE,
+  paginacaoSchema,
+} from '../utils/pagination.js';
 
 export { paginacaoSchema };
 
@@ -255,6 +258,33 @@ export const listarProcessoQuerySchema = paginacaoSchema.extend({
     .enum(['numero', 'nome', 'created_at', 'data_prevista', 'status'])
     .optional(),
   direcao: z.enum(['asc', 'desc']).optional(),
+});
+
+export const listarMovimentacaoQuerySchema = paginacaoSchema.extend({
+  tamanhoPagina: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_PAGE_SIZE)
+    .default(5),
+  tipo: z
+    .enum([
+      'CRIACAO',
+      'INICIO_PROCESSO',
+      'INICIO_ETAPA',
+      'CONCLUSAO_ETAPA',
+      'CONCLUSAO_PROCESSO',
+      'ENCAMINHAMENTO',
+      'DEVOLUCAO',
+      'ALTERACAO',
+      'SUSPENSAO',
+      'RETOMADA',
+      'OBSERVACAO',
+      'BLOQUEIO',
+      'DESBLOQUEIO',
+      'PULO_ETAPA',
+    ])
+    .optional(),
 });
 
 export const filtrosVisaoSchema = listarProcessoQuerySchema

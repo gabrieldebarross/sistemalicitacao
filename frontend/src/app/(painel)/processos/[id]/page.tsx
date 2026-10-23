@@ -3,7 +3,7 @@
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   AlertaErro,
@@ -29,6 +29,7 @@ import {
 } from '@/lib/format';
 import { useSessao } from '@/lib/session';
 import type {
+  Movimentacao,
   ProcessoDetalhe,
   ProcessoEtapa,
   Setor,
@@ -66,6 +67,9 @@ const TOM_ETAPA: Record<string, 'neutro' | 'info' | 'sucesso' | 'alerta'> = {
   BLOQUEADA: 'alerta',
   PULADA: 'neutro',
 };
+
+const MOVIMENTACOES_POR_PAGINA = 5;
+const MOVIMENTACOES_POR_PAGINA_TODAS = 100;
 
 /** Tempo decorrido na etapa: concluída usa a data de conclusão; aberta usa hoje. */
 function duracaoEtapa(
@@ -116,6 +120,16 @@ export default function ProcessoDetalhePage() {
   const [objeto, setObjeto] = useState('');
   const [descricao, setDescricao] = useState('');
 
+  const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
+  const [movTotal, setMovTotal] = useState(0);
+  const [movPagina, setMovPagina] = useState(1);
+  const [movTotalPaginas, setMovTotalPaginas] = useState(0);
+  const [movCarregando, setMovCarregando] = useState(true);
+  const [movErro, setMovErro] = useState('');
+  const [filtroTipo, setFiltroTipo] = useState('');
+  const [modoTodas, setModoTodas] = useState(false);
+  const movRequisicao = useRef(0);
+
   const carregar = useCallback(async () => {
     setCarregando(true);
     setErro('');
@@ -129,9 +143,69 @@ export default function ProcessoDetalhePage() {
     }
   }, [id]);
 
+  const carregarMovimentacoes = useCallback(
+    async (opcoes?: { pagina?: number; acumular?: boolean }) => {
+      const pagina = opcoes?.pagina ?? 1;
+      const acumular = opcoes?.acumular ?? false;
+      const requisicao = ++movRequisicao.current;
+
+      setMovCarregando(true);
+      setMovErro('');
+      if (!acumular) {
+        setMovimentacoes([]);
+        setMovTotal(0);
+        setMovPagina(pagina);
+        setMovTotalPaginas(0);
+      }
+
+      try {
+        const query = new URLSearchParams({
+          pagina: String(pagina),
+          tamanhoPagina: String(
+            modoTodas
+              ? MOVIMENTACOES_POR_PAGINA_TODAS
+              : MOVIMENTACOES_POR_PAGINA,
+          ),
+        });
+        if (filtroTipo) {
+          query.set('tipo', filtroTipo);
+        }
+
+        const resposta = await api.get<Movimentacao[]>(
+          `/processos/${id}/movimentacoes?${query.toString()}`,
+        );
+
+        if (requisicao !== movRequisicao.current) {
+          return;
+        }
+
+        setMovimentacoes((atuais) =>
+          acumular ? [...atuais, ...resposta.dados] : resposta.dados,
+        );
+        setMovTotal(resposta.paginacao?.total ?? 0);
+        setMovPagina(resposta.paginacao?.pagina ?? pagina);
+        setMovTotalPaginas(resposta.paginacao?.totalPaginas ?? 0);
+      } catch (falha) {
+        if (requisicao !== movRequisicao.current) {
+          return;
+        }
+        setMovErro(mensagemDeErro(falha));
+      } finally {
+        if (requisicao === movRequisicao.current) {
+          setMovCarregando(false);
+        }
+      }
+    },
+    [filtroTipo, id, modoTodas],
+  );
+
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  useEffect(() => {
+    void carregarMovimentacoes();
+  }, [carregarMovimentacoes]);
 
   async function executar(
     acao: () => Promise<unknown>,
@@ -144,6 +218,7 @@ export default function ProcessoDetalhePage() {
       setModal(null);
       aoConcluir?.();
       await carregar();
+      await carregarMovimentacoes({ pagina: 1 });
     } catch (falha) {
       setErro(mensagemDeErro(falha));
     } finally {
@@ -243,6 +318,12 @@ export default function ProcessoDetalhePage() {
       setores.find((setor) => setor.id === setorPrincipalEtapa)?.nome ??
       '—')
     : '—';
+
+  const rotuloMovimentacoes = movTotal === 1 ? 'movimentação' : 'movimentações';
+  const contagemMovimentacoes = movCarregando
+    ? 'Carregando movimentações…'
+    : `Mostrando ${movimentacoes.length} de ${movTotal} ${rotuloMovimentacoes}.`;
+  const temMaisMovimentacoes = movPagina < movTotalPaginas;
 
   return (
     <div className="flex flex-col gap-6">
@@ -589,34 +670,126 @@ export default function ProcessoDetalhePage() {
       </div>
 
       <Cartao>
-        <CabecalhoCartao titulo="Histórico de movimentações" />
-        {processo.movimentacoes.length === 0 ? (
-          <p className="px-4 py-4 text-sm text-tinta-500">
-            Nenhuma movimentação registrada.
-          </p>
-        ) : (
-          <ol className="divide-y divide-papel-100">
-            {processo.movimentacoes.map((mov) => (
-              <li key={mov.id} className="px-4 py-3 text-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-medium text-tinta-800">
-                    {ROTULOS_MOVIMENTACAO[mov.tipo] ?? mov.tipo}
-                  </span>
-                  <span className="text-xs text-tinta-500">
-                    {formatarDataHora(mov.criadoEm)}
-                  </span>
-                </div>
-                {mov.descricao ? (
-                  <p className="text-tinta-600">{mov.descricao}</p>
-                ) : null}
-                <p className="text-xs text-tinta-500">
-                  {mov.usuario?.nome ?? 'Sistema'}
-                  {mov.setor ? ` · ${mov.setor.nome}` : ''}
-                </p>
-              </li>
-            ))}
-          </ol>
-        )}
+        <CabecalhoCartao
+          titulo="Histórico de movimentações"
+          descricao="Últimas movimentações registradas no processo."
+          acao={
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+              <Selecao
+                id="filtro-movimentacao"
+                aria-label="Filtrar movimentações por tipo"
+                className="w-full sm:w-56"
+                value={filtroTipo}
+                onChange={(evento) => setFiltroTipo(evento.target.value)}
+              >
+                <option value="">Todos os tipos</option>
+                {Object.entries(ROTULOS_MOVIMENTACAO).map(
+                  ([valor, rotulo]) => (
+                    <option key={valor} value={valor}>
+                      {rotulo}
+                    </option>
+                  ),
+                )}
+              </Selecao>
+              {movTotal > MOVIMENTACOES_POR_PAGINA || modoTodas ? (
+                <Botao
+                  variante="secundario"
+                  disabled={movCarregando}
+                  onClick={() => setModoTodas((atual) => !atual)}
+                >
+                  {modoTodas ? 'Mostrar últimas 5' : 'Ver todas'}
+                </Botao>
+              ) : null}
+            </div>
+          }
+        />
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-papel-100 px-4 py-2.5 text-xs text-tinta-600">
+          <span role="status" aria-live="polite">
+            {contagemMovimentacoes}
+          </span>
+          {filtroTipo ? (
+            <button
+              type="button"
+              className="font-semibold text-rota-800 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rota-600 focus-visible:ring-offset-2"
+              onClick={() => setFiltroTipo('')}
+            >
+              Limpar filtro
+            </button>
+          ) : null}
+        </div>
+
+        <div aria-busy={movCarregando}>
+          {movErro ? (
+            <div className="flex flex-col gap-3 px-4 py-4">
+              <AlertaErro mensagem={movErro} />
+              <div>
+                <Botao
+                  variante="secundario"
+                  onClick={() =>
+                    void carregarMovimentacoes({ pagina: 1 })
+                  }
+                >
+                  Tentar novamente
+                </Botao>
+              </div>
+            </div>
+          ) : null}
+
+          {!movErro && movimentacoes.length === 0 && !movCarregando ? (
+            <p className="px-4 py-4 text-sm text-tinta-500">
+              {filtroTipo
+                ? `Nenhuma movimentação do tipo “${
+                    ROTULOS_MOVIMENTACAO[filtroTipo] ?? filtroTipo
+                  }”.`
+                : 'Nenhuma movimentação registrada.'}
+            </p>
+          ) : null}
+
+          {movCarregando && movimentacoes.length === 0 ? (
+            <Carregando texto="Carregando movimentações…" />
+          ) : null}
+
+          {movimentacoes.length > 0 ? (
+            <ol className="divide-y divide-papel-100">
+              {movimentacoes.map((mov) => (
+                <li key={mov.id} className="px-4 py-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-medium text-tinta-800">
+                      {ROTULOS_MOVIMENTACAO[mov.tipo] ?? mov.tipo}
+                    </span>
+                    <span className="text-xs text-tinta-500">
+                      {formatarDataHora(mov.criadoEm)}
+                    </span>
+                  </div>
+                  {mov.descricao ? (
+                    <p className="text-tinta-600">{mov.descricao}</p>
+                  ) : null}
+                  <p className="text-xs text-tinta-500">
+                    {mov.usuario?.nome ?? 'Sistema'}
+                    {mov.setor ? ` · ${mov.setor.nome}` : ''}
+                  </p>
+                </li>
+              ))}
+            </ol>
+          ) : null}
+
+          {temMaisMovimentacoes ? (
+            <div className="border-t border-papel-100 px-4 py-3">
+              <Botao
+                variante="secundario"
+                disabled={movCarregando}
+                onClick={() =>
+                  void carregarMovimentacoes({
+                    pagina: movPagina + 1,
+                    acumular: true,
+                  })
+                }
+              >
+                {movCarregando ? 'Carregando…' : 'Carregar mais'}
+              </Botao>
+            </div>
+          ) : null}
+        </div>
       </Cartao>
 
       <Modal

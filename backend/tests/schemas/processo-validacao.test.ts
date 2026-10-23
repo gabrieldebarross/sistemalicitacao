@@ -9,6 +9,7 @@ import {
   criarProcessoSchema,
   definirSetoresSchema,
   desbloquearEtapaSchema,
+  listarMovimentacaoQuerySchema,
   pularEtapaSchema,
   selecaoEtapaCondicionalSchema,
 } from '../../src/schemas/index.js';
@@ -188,6 +189,47 @@ describe('validação de etapas condicionais', () => {
       ],
     });
     expect(dados.etapasCondicionais).toHaveLength(1);
+  });
+});
+
+describe('validação do histórico de movimentações', () => {
+  it('aplica cinco itens por padrão e pagina inicial', () => {
+    const query = listarMovimentacaoQuerySchema.parse({});
+    expect(query.pagina).toBe(1);
+    expect(query.tamanhoPagina).toBe(5);
+    expect(query.tipo).toBeUndefined();
+  });
+
+  it('aceita filtro por tipo válido e converte paginação', () => {
+    const query = listarMovimentacaoQuerySchema.parse({
+      pagina: '2',
+      tamanhoPagina: '100',
+      tipo: 'DEVOLUCAO',
+    });
+    expect(query.pagina).toBe(2);
+    expect(query.tamanhoPagina).toBe(100);
+    expect(query.tipo).toBe('DEVOLUCAO');
+  });
+
+  it('distingue início do processo de início de etapa', () => {
+    expect(
+      listarMovimentacaoQuerySchema.parse({ tipo: 'INICIO_PROCESSO' }).tipo,
+    ).toBe('INICIO_PROCESSO');
+    expect(
+      listarMovimentacaoQuerySchema.parse({ tipo: 'INICIO_ETAPA' }).tipo,
+    ).toBe('INICIO_ETAPA');
+  });
+
+  it('rejeita tipo desconhecido', () => {
+    expect(() =>
+      listarMovimentacaoQuerySchema.parse({ tipo: 'TIPO_INEXISTENTE' }),
+    ).toThrow();
+  });
+
+  it('rejeita tamanho de página acima do limite', () => {
+    expect(() =>
+      listarMovimentacaoQuerySchema.parse({ tamanhoPagina: 101 }),
+    ).toThrow();
   });
 });
 

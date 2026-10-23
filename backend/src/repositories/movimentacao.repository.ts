@@ -1,9 +1,9 @@
-import type { Transaction } from 'sequelize';
+import type { Transaction, WhereOptions } from 'sequelize';
 
+import type { MovimentacaoTipo } from '../domain/enums.js';
 import { Movimentacao } from '../models/movimentacao.js';
 import { Setor } from '../models/setor.js';
 import { Usuario } from '../models/usuario.js';
-import type { MovimentacaoTipo } from '../domain/enums.js';
 
 export interface CriarMovimentacao {
   processoId: number;
@@ -23,15 +23,34 @@ export async function criar(
   return Movimentacao.create(dados, transaction ? { transaction } : {});
 }
 
+export interface FiltroMovimentacao {
+  processoId: number;
+  tipo?: MovimentacaoTipo;
+  offset: number;
+  limit: number;
+}
+
 export async function listarPorProcesso(
-  processoId: number,
-): Promise<Movimentacao[]> {
-  return Movimentacao.findAll({
-    where: { processoId },
+  filtro: FiltroMovimentacao,
+): Promise<{ itens: Movimentacao[]; total: number }> {
+  const where: WhereOptions = { processoId: filtro.processoId };
+  if (filtro.tipo) {
+    where.tipo = filtro.tipo;
+  }
+
+  const { rows, count } = await Movimentacao.findAndCountAll({
+    where,
     include: [
       { model: Usuario, as: 'usuario', attributes: ['id', 'nome'] },
       { model: Setor, as: 'setor', attributes: ['id', 'nome'] },
     ],
-    order: [['created_at', 'DESC']],
+    order: [
+      ['created_at', 'DESC'],
+      ['id', 'DESC'],
+    ],
+    offset: filtro.offset,
+    limit: filtro.limit,
   });
+
+  return { itens: rows, total: count };
 }

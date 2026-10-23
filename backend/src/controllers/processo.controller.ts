@@ -13,6 +13,7 @@ import {
   idParamSchema,
   justificativaSchema,
   listarProcessoQuerySchema,
+  listarMovimentacaoQuerySchema,
   listarFluxosDisponiveisQuerySchema,
   processoEtapaParamSchema,
   pularEtapaSchema,
@@ -258,5 +259,6 @@ export async function movimentacoes(
   res: Response,
 ): Promise<void> {
   const { id } = validar(idParamSchema, req.params);
-  responderOk(res, await processoService.movimentacoes(id));
+  const query = validar(listarMovimentacaoQuerySchema, req.query);
+  responderPaginado(res, await processoService.movimentacoes(id, query));
 }

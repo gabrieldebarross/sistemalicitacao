@@ -94,7 +94,6 @@ export interface ProcessoDetalheDTO extends ProcessoResumoDTO {
   descricao: string | null;
   fluxo: { id: number; nome: string; versao: number } | null;
   etapas: ProcessoEtapaDTO[];
-  movimentacoes: MovimentacaoDTO[];
 }
 
 export interface EtapaCondicionalDisponivelDTO {
@@ -199,10 +198,7 @@ function movimentacaoToDTO(mov: Movimentacao): MovimentacaoDTO {
   };
 }
 
-function toDetalhe(
-  processo: Processo,
-  movimentacoes: Movimentacao[],
-): ProcessoDetalheDTO {
+function toDetalhe(processo: Processo): ProcessoDetalheDTO {
   const etapas = [...(processo.etapas ?? [])].sort(
     (a, b) => a.sequencia - b.sequencia,
   );
@@ -217,7 +213,6 @@ function toDetalhe(
         }
       : null,
     etapas: etapas.map(etapaToDTO),
-    movimentacoes: movimentacoes.map(movimentacaoToDTO),
   };
 }
 
@@ -326,8 +321,6 @@ async function ativarProximaEtapa(
       processo,
       {
         processoEtapaAtualId: proxima.id,
-        setorAtualId: proxima.setorId,
-        responsavelAtualId: proxima.responsavelId,
       },
       transaction,
     );
@@ -337,8 +330,6 @@ async function ativarProximaEtapa(
     processo,
     {
       processoEtapaAtualId: null,
-      setorAtualId: null,
-      responsavelAtualId: null,
     },
     transaction,
   );
@@ -444,8 +435,7 @@ export async function fluxosDisponiveis(
 
 export async function detalhar(id: number): Promise<ProcessoDetalheDTO> {
   const processo = await carregar(id);
-  const movimentacoes = await movRepo.listarPorProcesso(id);
-  return toDetalhe(processo, movimentacoes);
+  return toDetalhe(processo);
 }
 
 export async function criar(
@@ -607,7 +597,6 @@ export async function criar(
     await processoRepo.atualizar(
       criado,
       {
-        setorAtualId: primeira.setorId,
         processoEtapaAtualId: primeira.id,
       },
       transaction,
@@ -759,15 +748,20 @@ export async function iniciar(
     status: PROCESSO_STATUS.EM_ANDAMENTO,
     iniciadoEm: agora,
     processoEtapaAtualId: primeira.id,
-    setorAtualId: primeira.setorId,
-    responsavelAtualId: primeira.responsavelId,
   });
 
   await registrarMovimentacao(
     processo,
+    null,
+    'INICIO_PROCESSO',
+    'Processo iniciado.',
+    contexto,
+  );
+  await registrarMovimentacao(
+    processo,
     primeira.id,
     'INICIO_ETAPA',
-    'Processo iniciado.',
+    `Etapa "${primeira.nome}" iniciada.`,
     contexto,
   );
   await auditoria.registrar(contexto, {
@@ -850,8 +844,6 @@ export async function concluirEtapa(
         processo,
         {
           processoEtapaAtualId: proxima.id,
-          setorAtualId: proxima.setorId,
-          responsavelAtualId: proxima.responsavelId,
         },
         transaction,
       );
@@ -862,8 +854,6 @@ export async function concluirEtapa(
         processo,
         {
           processoEtapaAtualId: null,
-          setorAtualId: null,
-          responsavelAtualId: null,
         },
         transaction,
       );
@@ -886,6 +876,15 @@ export async function concluirEtapa(
         retorno && proxima.id === retorno.id
           ? `Devolução cumprida. Retornado para a etapa "${proxima.nome}".`
           : `Encaminhado para a etapa "${proxima.nome}".`,
+        contexto,
+        null,
+        transaction,
+      );
+      await registrarMovimentacao(
+        processo,
+        proxima.id,
+        'INICIO_ETAPA',
+        `Etapa "${proxima.nome}" iniciada.`,
         contexto,
         null,
         transaction,
@@ -1011,8 +1010,6 @@ export async function devolverEtapa(
       processo,
       {
         processoEtapaAtualId: alvo.id,
-        setorAtualId: alvo.setorId,
-        responsavelAtualId: alvo.responsavelId,
       },
       transaction,
     );
@@ -1029,6 +1026,15 @@ export async function devolverEtapa(
         etapaDestinoId: alvo.id,
         etapaDestinoNome: alvo.nome,
       },
+      transaction,
+    );
+    await registrarMovimentacao(
+      processo,
+      alvo.id,
+      'INICIO_ETAPA',
+      `Etapa "${alvo.nome}" reiniciada por devolução.`,
+      contexto,
+      { retornoParaEtapaId: atual.id },
       transaction,
     );
 
@@ -1675,6 +1681,15 @@ export async function pularEtapa(
         null,
         transaction,
       );
+      await registrarMovimentacao(
+        processo,
+        proxima.id,
+        'INICIO_ETAPA',
+        `Etapa "${proxima.nome}" iniciada após pulo de etapa.`,
+        contexto,
+        null,
+        transaction,
+      );
     }
 
     eventoAuditoria = {
@@ -1882,8 +1897,24 @@ export async function encerrar(
 
 export async function movimentacoes(
   id: number,
-): Promise<MovimentacaoDTO[]> {
+  input: {
+    tipo?: MovimentacaoTipo;
+    pagina: number;
+    tamanhoPagina: number;
+  },
+): Promise<ResultadoPaginado<MovimentacaoDTO>> {
   await carregar(id);
-  const movs = await movRepo.listarPorProcesso(id);
-  return movs.map(movimentacaoToDTO);
+  const { offset, limit, pagina, tamanhoPagina } = resolverPaginacao(input);
+  const { itens, total } = await movRepo.listarPorProcesso({
+    processoId: id,
+    tipo: input.tipo,
+    offset,
+    limit,
+  });
+  return montarPaginado(
+    itens.map(movimentacaoToDTO),
+    total,
+    pagina,
+    tamanhoPagina,
+  );
 }

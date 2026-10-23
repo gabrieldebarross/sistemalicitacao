@@ -115,8 +115,10 @@ podem ser puladas.
 O administrador mantém o vínculo entre usuários e setores na tela de usuários
 (`PUT /api/usuarios/:id/setores`), indicando no máximo um setor principal.
 
-- O **responsável e o setor do processo** são independentes. Alterar o
-  responsável do processo não altera automaticamente o setor do processo.
+- O **responsável e o setor do processo** são independentes das etapas e só
+  mudam por atribuição explícita do processo. Iniciar, concluir, avançar,
+  devolver ou pular etapa não altera esses campos. Alterar o responsável do
+  processo não altera automaticamente o setor do processo.
 - O **setor da etapa** é automático: ao atribuir um novo responsável à etapa, o
   setor da etapa passa a ser o **setor principal do novo responsável**. Ao
   devolver a etapa ao usuário anterior, ela volta ao setor principal dele. Não há
@@ -130,11 +132,19 @@ O administrador mantém o vínculo entre usuários e setores na tela de usuário
 
 ## Movimentações
 
-`CRIACAO`, `INICIO_ETAPA`, `CONCLUSAO_ETAPA`, `CONCLUSAO_PROCESSO`,
-`ENCAMINHAMENTO`, `DEVOLUCAO`, `ALTERACAO`, `SUSPENSAO`, `RETOMADA`,
-`OBSERVACAO`, `BLOQUEIO`, `DESBLOQUEIO`, `PULO_ETAPA`.
+`CRIACAO`, `INICIO_PROCESSO`, `INICIO_ETAPA`, `CONCLUSAO_ETAPA`,
+`CONCLUSAO_PROCESSO`, `ENCAMINHAMENTO`, `DEVOLUCAO`, `ALTERACAO`, `SUSPENSAO`,
+`RETOMADA`, `OBSERVACAO`, `BLOQUEIO`, `DESBLOQUEIO`, `PULO_ETAPA`.
+
+`INICIO_PROCESSO` registra a passagem do rascunho para o andamento. `INICIO_ETAPA`
+registra quando uma etapa passa a ser a etapa atual, inclusive após conclusão,
+devolução ou pulo.
 
 Histórico tratado como auditoria: sem edição/exclusão arbitrária pela UI comum.
+
+A consulta do histórico é paginada no servidor: a tela inicia com as 5
+movimentações mais recentes, permite filtrar por tipo e carregar as demais em
+páginas de até 100 registros.
 
 ## Prazos internos
 
