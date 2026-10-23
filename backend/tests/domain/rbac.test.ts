@@ -4,6 +4,7 @@ import { PERMISSIONS } from '../../src/domain/permissions.js';
 import {
   possuiAlgumaPermissao,
   possuiPermissao,
+  resolverPapelPrincipalId,
   type SujeitoAutorizavel,
 } from '../../src/domain/rbac.js';
 
@@ -53,5 +54,23 @@ describe('política RBAC', () => {
     expect(possuiPermissao(usuario, PERMISSIONS.PROCESSOS_BLOCK)).toBe(false);
     expect(possuiPermissao(usuario, PERMISSIONS.PROCESSOS_UNBLOCK)).toBe(false);
     expect(possuiPermissao(usuario, PERMISSIONS.PROCESSOS_SKIP)).toBe(false);
+  });
+});
+
+describe('papel principal', () => {
+  it('preserva o principal atual quando ele continua selecionado', () => {
+    expect(resolverPapelPrincipalId([1, 2], undefined, 2)).toBe(2);
+  });
+
+  it('usa o primeiro papel quando o principal atual é removido', () => {
+    expect(resolverPapelPrincipalId([1, 2], undefined, 3)).toBe(1);
+  });
+
+  it('respeita o principal solicitado explicitamente', () => {
+    expect(resolverPapelPrincipalId([1, 2], 2, 1)).toBe(2);
+  });
+
+  it('não define principal quando não há papéis', () => {
+    expect(resolverPapelPrincipalId([], undefined, 1)).toBeNull();
   });
 });

@@ -19,6 +19,7 @@ export interface Perfil {
   cargo: { id: number; nome: string } | null;
   senhaProvisoria: boolean;
   mfaAtivo: boolean;
+  papelPrincipal: { id: number; nome: string } | null;
   roles: string[];
   permissoes: string[];
 }

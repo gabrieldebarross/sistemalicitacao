@@ -78,6 +78,7 @@ export default function UsuariosPage() {
   const [salvando, setSalvando] = useState(false);
   const [rolesUsuario, setRolesUsuario] = useState<Usuario | null>(null);
   const [rolesSelecionados, setRolesSelecionados] = useState<number[]>([]);
+  const [papelPrincipalId, setPapelPrincipalId] = useState('');
   const [setoresUsuario, setSetoresUsuario] = useState<Usuario | null>(null);
   const [setoresSelecionados, setSetoresSelecionados] = useState<number[]>([]);
   const [setorPrincipalId, setSetorPrincipalId] = useState('');
@@ -182,6 +183,9 @@ export default function UsuariosPage() {
     try {
       await api.put(`/usuarios/${rolesUsuario.id}/roles`, {
         roleIds: rolesSelecionados,
+        papelPrincipalId: papelPrincipalId
+          ? Number(papelPrincipalId)
+          : null,
       });
       setRolesUsuario(null);
       await carregar();
@@ -293,11 +297,24 @@ export default function UsuariosPage() {
   async function abrirRoles(usuario: Usuario) {
     setRolesUsuario(usuario);
     setRolesSelecionados([]);
+    setPapelPrincipalId('');
     const nomes = new Set(usuario.roles);
-    if (papels !== null) {
-      setRolesSelecionados(
-        papels.filter((papel) => nomes.has(papel.nome)).map((papel) => papel.id),
+
+    function selecionar(papeis: Papel[]) {
+      const ids = papeis
+        .filter((papel) => nomes.has(papel.nome))
+        .map((papel) => papel.id);
+      const principal = usuario.papelPrincipal?.id;
+      setRolesSelecionados(ids);
+      setPapelPrincipalId(
+        principal && ids.includes(principal)
+          ? String(principal)
+          : String(ids[0] ?? ''),
       );
+    }
+
+    if (papels !== null) {
+      selecionar(papels);
       return;
     }
     setCarregandoPapels(true);
@@ -305,15 +322,29 @@ export default function UsuariosPage() {
     try {
       const resposta = await api.get<Papel[]>('/roles');
       setPapels(resposta.dados);
-      setRolesSelecionados(
-        resposta.dados
-          .filter((papel) => nomes.has(papel.nome))
-          .map((papel) => papel.id),
-      );
+      selecionar(resposta.dados);
     } catch (falha) {
       setErro(mensagemDeErro(falha));
     } finally {
       setCarregandoPapels(false);
+    }
+  }
+
+  function alternarPapel(papelId: number, marcado: boolean) {
+    const proximo = marcado
+      ? [...rolesSelecionados, papelId]
+      : rolesSelecionados.filter((id) => id !== papelId);
+    setRolesSelecionados(proximo);
+    if (proximo.length === 0) {
+      setPapelPrincipalId('');
+      return;
+    }
+    if (marcado && !papelPrincipalId) {
+      setPapelPrincipalId(String(papelId));
+      return;
+    }
+    if (!proximo.includes(Number(papelPrincipalId))) {
+      setPapelPrincipalId(String(proximo[0]));
     }
   }
 
@@ -445,7 +476,18 @@ export default function UsuariosPage() {
                         : '—'}
                     </td>
                     <td className="px-4 py-3 text-tinta-600">
-                      {usuario.roles.length > 0 ? usuario.roles.join(', ') : '—'}
+                      {usuario.roles.length > 0 ? (
+                        <span className="flex flex-col gap-1">
+                          <span>{usuario.roles.join(', ')}</span>
+                          {usuario.papelPrincipal ? (
+                            <Etiqueta tom="info">
+                              Principal: {usuario.papelPrincipal.nome}
+                            </Etiqueta>
+                          ) : null}
+                        </span>
+                      ) : (
+                        '—'
+                      )}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3">
                       <div className="flex flex-wrap items-center gap-1.5">
@@ -690,14 +732,16 @@ export default function UsuariosPage() {
       >
         <p className="mb-3 text-sm text-tinta-500">
           Selecione os papéis do usuário. Cada papel concede as permissões
-          listadas.
+          listadas. O papel principal é apenas o destaque exibido no cabeçalho;
+          todos os papéis continuam valendo para autorização.
         </p>
         {carregandoPapels ? (
           <Carregando texto="Carregando papéis…" />
         ) : papels === null || papels.length === 0 ? (
           <p className="text-sm text-tinta-500">Nenhum papel cadastrado.</p>
         ) : (
-          <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto pr-1">
+          <>
+            <ul className="flex max-h-96 flex-col gap-2 overflow-y-auto pr-1">
             {papels.map((papel) => {
               const marcado = rolesSelecionados.includes(papel.id);
               return (
@@ -711,11 +755,7 @@ export default function UsuariosPage() {
                       className="mt-0.5 h-4 w-4 rounded border-linha-300"
                       checked={marcado}
                       onChange={(evento) =>
-                        setRolesSelecionados((atual) =>
-                          evento.target.checked
-                            ? [...atual, papel.id]
-                            : atual.filter((valor) => valor !== papel.id),
-                        )
+                        alternarPapel(papel.id, evento.target.checked)
                       }
                     />
                     <span className="flex-1">
@@ -756,7 +796,39 @@ export default function UsuariosPage() {
                 </li>
               );
             })}
-          </ul>
+            </ul>
+            {rolesSelecionados.length > 0 ? (
+              <div className="mt-4">
+                <Campo
+                  rotulo="Papel principal"
+                  htmlFor="papel-principal"
+                  dica="Usado apenas como destaque no cabeçalho e no perfil."
+                >
+                  <Selecao
+                    id="papel-principal"
+                    value={papelPrincipalId}
+                    onChange={(evento) =>
+                      setPapelPrincipalId(evento.target.value)
+                    }
+                  >
+                    {papels
+                      .filter((papel) =>
+                        rolesSelecionados.includes(papel.id),
+                      )
+                      .map((papel) => (
+                        <option key={papel.id} value={papel.id}>
+                          {papel.nome}
+                        </option>
+                      ))}
+                  </Selecao>
+                </Campo>
+              </div>
+            ) : (
+              <p className="mt-4 text-xs text-tinta-500">
+                Selecione ao menos um papel para definir o principal.
+              </p>
+            )}
+          </>
         )}
       </Modal>
 

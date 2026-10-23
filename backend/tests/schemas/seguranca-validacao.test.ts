@@ -4,6 +4,7 @@ import { env } from '../../src/config/env.js';
 import {
   alterarSenhaSchema,
   criarUsuarioSchema,
+  definirRolesSchema,
   listarTarefaQuerySchema,
   mfaCodigoSchema,
   salvarVisaoSchema,
@@ -101,5 +102,34 @@ describe('filtros de tarefas e visões', () => {
     expect(() =>
       salvarVisaoSchema.parse({ nome: '   ', filtros: {} }),
     ).toThrow();
+  });
+});
+
+describe('papel principal do usuário', () => {
+  it('aceita um papel principal entre os papéis selecionados', () => {
+    expect(
+      definirRolesSchema.parse({
+        roleIds: [1, 2],
+        papelPrincipalId: 2,
+      }),
+    ).toEqual({ roleIds: [1, 2], papelPrincipalId: 2 });
+  });
+
+  it('rejeita papel principal fora dos papéis selecionados', () => {
+    expect(() =>
+      definirRolesSchema.parse({
+        roleIds: [1, 2],
+        papelPrincipalId: 3,
+      }),
+    ).toThrow('O papel principal deve estar entre os papéis selecionados.');
+  });
+
+  it('aceita papel principal omitido ou nulo', () => {
+    expect(definirRolesSchema.parse({ roleIds: [1] })).toEqual({
+      roleIds: [1],
+    });
+    expect(
+      definirRolesSchema.parse({ roleIds: [1], papelPrincipalId: null }),
+    ).toEqual({ roleIds: [1], papelPrincipalId: null });
   });
 });

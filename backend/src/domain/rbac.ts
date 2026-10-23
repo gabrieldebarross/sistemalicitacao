@@ -32,3 +32,21 @@ export function possuiAlgumaPermissao(
   }
   return permissoes.some((permissao) => sujeito.permissoes.has(permissao));
 }
+
+/**
+ * Resolve o papel principal exibido ao usuário. O papel principal é apenas
+ * identidade visual: todos os papéis atribuídos continuam valendo para RBAC.
+ */
+export function resolverPapelPrincipalId(
+  roleIds: readonly number[],
+  papelPrincipalSolicitado: number | null | undefined,
+  papelPrincipalAtual: number | null,
+): number | null {
+  const principalPreservado =
+    papelPrincipalAtual !== null && roleIds.includes(papelPrincipalAtual)
+      ? papelPrincipalAtual
+      : null;
+  return (
+    papelPrincipalSolicitado ?? principalPreservado ?? roleIds[0] ?? null
+  );
+}

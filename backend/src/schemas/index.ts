@@ -153,9 +153,29 @@ export const atualizarUsuarioSchema = z.object({
 export const desativarUsuarioSchema = z.object({
   destinoUsuarioId: z.coerce.number().int().positive().optional(),
 });
-export const definirRolesSchema = z.object({
-  roleIds: z.array(z.coerce.number().int().positive()),
-});
+export const definirRolesSchema = z
+  .object({
+    roleIds: z.array(z.coerce.number().int().positive()),
+    papelPrincipalId: z.coerce
+      .number()
+      .int()
+      .positive()
+      .nullable()
+      .optional(),
+  })
+  .superRefine((dados, contexto) => {
+    if (
+      dados.papelPrincipalId !== undefined &&
+      dados.papelPrincipalId !== null &&
+      !dados.roleIds.includes(dados.papelPrincipalId)
+    ) {
+      contexto.addIssue({
+        code: 'custom',
+        path: ['papelPrincipalId'],
+        message: 'O papel principal deve estar entre os papéis selecionados.',
+      });
+    }
+  });
 export const definirSetoresSchema = z
   .object({
     setorIds: z

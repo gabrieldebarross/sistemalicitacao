@@ -173,6 +173,10 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
     return <Carregando texto="Carregando sessão…" />;
   }
 
+  const papelPrincipal =
+    perfil.papelPrincipal?.nome ?? perfil.roles[0] ?? 'Sem papel';
+  const tituloPapeis = perfil.roles.join(', ') || 'Sem papel';
+
   function alternarMenuLateral() {
     setRecolhido((atual) => {
       const proximo = !atual;
@@ -327,10 +331,13 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
               Sessão institucional
             </p>
           ) : null}
-          <div
+          <Link
+            href="/perfil"
+            title={`Abrir meu perfil — ${tituloPapeis}`}
+            aria-label="Abrir meu perfil"
             className={cn(
-              'mt-2 flex items-center gap-2.5',
-              recolhido ? 'justify-center' : 'rounded-xl bg-white/5 p-2',
+              'mt-2 flex items-center gap-2.5 rounded-xl transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sinal-300',
+              recolhido ? 'justify-center p-1' : 'bg-white/5 p-2',
             )}
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rota-700 text-xs font-bold text-white">
@@ -342,11 +349,11 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
                   {perfil.nome}
                 </span>
                 <span className="block truncate text-[0.65rem] text-rota-300">
-                  {perfil.roles.join(', ') || 'Sem papel'}
+                  {papelPrincipal}
                 </span>
               </span>
             ) : null}
-          </div>
+          </Link>
         </div>
       </aside>
 
@@ -376,10 +383,19 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
             </div>
             {navegacao(false)}
             <div className="border-t border-white/10 p-4">
-              <p className="truncate text-sm font-semibold text-white">{perfil.nome}</p>
-              <p className="truncate text-xs text-rota-300">
-                {perfil.roles.join(', ') || 'Sem papel'}
-              </p>
+              <Link
+                href="/perfil"
+                onClick={() => setMenuAberto(false)}
+                title={`Abrir meu perfil — ${tituloPapeis}`}
+                className="block rounded-lg p-2 transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sinal-300"
+              >
+                <p className="truncate text-sm font-semibold text-white">
+                  {perfil.nome}
+                </p>
+                <p className="truncate text-xs text-rota-300">
+                  {papelPrincipal}
+                </p>
+              </Link>
             </div>
           </aside>
         </div>
@@ -411,15 +427,22 @@ export function AppShell({ children }: Readonly<{ children: React.ReactNode }>) 
             </div>
           </div>
           <div className="flex items-center gap-2.5">
-            <div className="hidden text-right leading-tight sm:block">
-              <p className="text-sm font-semibold text-tinta-900">{perfil.nome}</p>
-              <p className="text-xs text-tinta-600">
-                {perfil.roles.join(', ') || 'Sem papel'}
-              </p>
-            </div>
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-linha-200 bg-white text-xs font-bold text-tinta-800 shadow-sm">
-              {perfil.nome.slice(0, 1).toUpperCase()}
-            </span>
+            <Link
+              href="/perfil"
+              title={`Abrir meu perfil — ${tituloPapeis}`}
+              aria-label="Abrir meu perfil"
+              className="group flex items-center gap-2.5 rounded-xl p-1 transition-colors hover:bg-papel-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rota-600"
+            >
+              <div className="hidden text-right leading-tight sm:block">
+                <p className="text-sm font-semibold text-tinta-900 group-hover:text-rota-800">
+                  {perfil.nome}
+                </p>
+                <p className="text-xs text-tinta-600">{papelPrincipal}</p>
+              </div>
+              <span className="flex h-9 w-9 items-center justify-center rounded-lg border border-linha-200 bg-white text-xs font-bold text-tinta-800 shadow-sm transition-colors group-hover:border-rota-300 group-hover:bg-rota-50">
+                {perfil.nome.slice(0, 1).toUpperCase()}
+              </span>
+            </Link>
             <button
               type="button"
               onClick={aoSair}

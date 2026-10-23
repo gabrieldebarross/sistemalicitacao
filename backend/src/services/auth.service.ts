@@ -1,5 +1,6 @@
 import { env } from '../config/env.js';
 import {
+  AccountLockedError,
   AuthenticationError,
   ConflictError,
   MfaChallengeError,
@@ -25,6 +26,7 @@ export interface PerfilUsuario {
   ativo: boolean;
   senhaProvisoria: boolean;
   mfaAtivo: boolean;
+  papelPrincipal: { id: number; nome: string } | null;
   roles: string[];
   permissoes: string[];
 }
@@ -56,7 +58,7 @@ const MFA_MAX_TENTATIVAS = 5;
 function montarPerfil(
   dados: usuarioRepo.UsuarioAutenticacao,
 ): PerfilUsuario {
-  const { usuario, permissoes, roles } = dados;
+  const { usuario, permissoes, roles, papelPrincipal } = dados;
   return {
     id: usuario.id,
     nome: usuario.nome,
@@ -67,6 +69,7 @@ function montarPerfil(
     ativo: usuario.ativo,
     senhaProvisoria: usuario.senhaProvisoria,
     mfaAtivo: usuario.mfaAtivo,
+    papelPrincipal,
     roles,
     permissoes: [...permissoes].sort(),
   };
@@ -75,6 +78,7 @@ function montarPerfil(
 async function registrarFalhaLogin(
   usuarioId: number | null,
   contexto: ContextoRequisicao,
+  motivo?: string,
 ): Promise<void> {
   await auditoria.registrar(
     usuarioId ? { ...contexto, usuarioId } : contexto,
@@ -83,13 +87,46 @@ async function registrarFalhaLogin(
       recurso: 'sessao',
       recursoId: usuarioId,
       resultado: 'FALHA',
+      metadados: motivo ? { motivo } : null,
     },
   );
 }
 
+function mensagemContaBloqueada(bloqueadoAte: Date): string {
+  const minutos = Math.max(
+    1,
+    Math.ceil((bloqueadoAte.getTime() - Date.now()) / 60_000),
+  );
+  const unidade = minutos === 1 ? 'minuto' : 'minutos';
+  return `Sua conta está temporariamente bloqueada por tentativas de login sem sucesso. Tente novamente em ${minutos} ${unidade} ou solicite o desbloqueio ao administrador.`;
+}
+
+/**
+ * Aviso baseado apenas nas falhas do IP, não no usuário informado. Assim, a
+ * mesma mensagem é exibida para e-mails existentes e inexistentes, evitando
+ * enumeração de contas.
+ */
+function mensagemCredenciaisInvalidas(
+  contexto: ContextoRequisicao,
+): string {
+  const tentativas = contexto.tentativasLoginIp ?? 0;
+  const limite = env.login.maxAttempts;
+  if (limite <= 1) {
+    return 'Credenciais inválidas.';
+  }
+  if (tentativas === limite - 2) {
+    return 'Credenciais inválidas. Atenção: se a conta existir, mais uma tentativa sem sucesso poderá bloqueá-la temporariamente.';
+  }
+  if (tentativas >= limite - 1) {
+    return 'Credenciais inválidas. Atenção: se a conta existir, ela poderá ter sido bloqueada temporariamente por tentativas sem sucesso.';
+  }
+  return 'Credenciais inválidas.';
+}
+
 /**
  * Autentica e-mail/senha. Mensagens genéricas evitam enumeração de usuários.
- * Quando MFA é exigido, retorna um desafio de curta duração em vez de sessão.
+ * O estado de bloqueio só é revelado depois que a senha é validada. Quando MFA
+ * é exigido, retorna um desafio de curta duração em vez de sessão.
  */
 export async function login(
   email: string,
@@ -101,14 +138,23 @@ export async function login(
 
   if (!usuario || !usuario.ativo) {
     await registrarFalhaLogin(null, contexto);
-    throw new AuthenticationError('Credenciais inválidas.');
+    throw new AuthenticationError(mensagemCredenciaisInvalidas(contexto));
   }
 
-  if (usuario.bloqueadoAte && usuario.bloqueadoAte > agora) {
+  const bloqueadoAte = usuario.bloqueadoAte;
+  if (bloqueadoAte && bloqueadoAte > agora) {
+    // A senha é validada antes de revelar o bloqueio. Assim, apenas quem
+    // conhece a credencial recebe a mensagem específica; tentativas com senha
+    // incorreta continuam genéricas para evitar enumeração de usuários.
+    const senhaConfere = await verificarSenha(senha, usuario.senhaHash);
+    if (senhaConfere) {
+      await registrarFalhaLogin(usuario.id, contexto, 'CONTA_BLOQUEADA');
+      throw new AccountLockedError(mensagemContaBloqueada(bloqueadoAte));
+    }
     await registrarFalhaLogin(usuario.id, contexto);
-    throw new AuthenticationError('Credenciais inválidas.');
+    throw new AuthenticationError(mensagemCredenciaisInvalidas(contexto));
   }
-  if (usuario.bloqueadoAte && usuario.bloqueadoAte <= agora) {
+  if (bloqueadoAte && bloqueadoAte <= agora) {
     usuario.bloqueadoAte = null;
     usuario.tentativasFalhas = 0;
   }
@@ -124,7 +170,7 @@ export async function login(
     }
     await usuario.save();
     await registrarFalhaLogin(usuario.id, contexto);
-    throw new AuthenticationError('Credenciais inválidas.');
+    throw new AuthenticationError(mensagemCredenciaisInvalidas(contexto));
   }
 
   usuario.tentativasFalhas = 0;

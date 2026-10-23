@@ -161,6 +161,7 @@ export interface Usuario {
   ativo: boolean;
   bloqueadoAte: string | null;
   cargo: Referencia | null;
+  papelPrincipal: Referencia | null;
   roles: string[];
   setores: SetorUsuario[];
 }

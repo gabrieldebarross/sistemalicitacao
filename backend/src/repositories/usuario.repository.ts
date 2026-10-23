@@ -13,6 +13,7 @@ export interface CriarUsuario {
   email: string;
   senhaHash: string;
   cargoId: number | null;
+  papelPrincipalId?: number | null;
   ativo?: boolean;
   senhaProvisoria?: boolean;
 }
@@ -33,6 +34,7 @@ export async function buscarPorId(id: number): Promise<Usuario | null> {
   return Usuario.findByPk(id, {
     include: [
       { model: Cargo, as: 'cargo' },
+      { model: Role, as: 'papelPrincipal' },
       { model: Role, as: 'roles', through: { attributes: [] } },
     ],
   });
@@ -55,6 +57,7 @@ export interface UsuarioAutenticacao {
   usuario: Usuario;
   permissoes: Set<string>;
   roles: string[];
+  papelPrincipal: { id: number; nome: string } | null;
 }
 
 /** Carrega usuário com papéis e permissões resolvidos para autorização. */
@@ -64,6 +67,7 @@ export async function buscarParaAutenticacao(
   const usuario = await Usuario.findByPk(id, {
     include: [
       { model: Cargo, as: 'cargo' },
+      { model: Role, as: 'papelPrincipal' },
       {
         model: Role,
         as: 'roles',
@@ -86,6 +90,9 @@ export async function buscarParaAutenticacao(
     usuario,
     permissoes,
     roles: roles.map((role) => role.nome),
+    papelPrincipal: usuario.papelPrincipal
+      ? { id: usuario.papelPrincipal.id, nome: usuario.papelPrincipal.nome }
+      : null,
   };
 }
 
@@ -111,6 +118,7 @@ export async function listar(
     where,
     include: [
       { model: Cargo, as: 'cargo' },
+      { model: Role, as: 'papelPrincipal' },
       { model: Role, as: 'roles', through: { attributes: [] } },
     ],
     order: [['nome', 'ASC']],
@@ -132,16 +140,20 @@ export async function atualizar(
 export async function definirRoles(
   usuarioId: number,
   roleIds: readonly number[],
+  papelPrincipalId: number | null,
   atribuidoPorId: number | null,
   transaction: Transaction,
 ): Promise<void> {
   await UserRole.destroy({ where: { usuarioId }, transaction });
-  if (roleIds.length === 0) {
-    return;
+  if (roleIds.length > 0) {
+    await UserRole.bulkCreate(
+      roleIds.map((roleId) => ({ usuarioId, roleId, atribuidoPorId })),
+      { transaction },
+    );
   }
-  await UserRole.bulkCreate(
-    roleIds.map((roleId) => ({ usuarioId, roleId, atribuidoPorId })),
-    { transaction },
+  await Usuario.update(
+    { papelPrincipalId },
+    { where: { id: usuarioId }, transaction },
   );
 }
 

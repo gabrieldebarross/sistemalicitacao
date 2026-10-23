@@ -10,6 +10,7 @@ function requisitar(ip: string): { res: Response; next: ReturnType<typeof vi.fn>
   const req = { ip } as Request;
   const res = new EventEmitter() as Response;
   res.statusCode = 200;
+  res.locals = {};
   const next = vi.fn();
   limitarLogin(req, res, next as unknown as NextFunction);
   return { res, next };
@@ -34,6 +35,27 @@ describe('limite de tentativas de autenticação', () => {
     for (let indice = 0; indice < 30; indice += 1) {
       const { res, next } = requisitar('10.0.0.2');
       responder(res, 400);
+      expect(next).toHaveBeenCalledTimes(1);
+      expect(next.mock.calls[0]).toEqual([]);
+    }
+  });
+
+  it('expõe ao login a contagem anterior de falhas do IP', () => {
+    const ip = '10.0.0.5';
+    for (let indice = 0; indice < 3; indice += 1) {
+      const { res } = requisitar(ip);
+      responder(res, 401);
+    }
+
+    const { res } = requisitar(ip);
+    expect(res.locals.tentativasLoginIp).toBe(3);
+  });
+
+  it('não conta conta bloqueada (423) como falha de credencial', () => {
+    const ip = '10.0.0.4';
+    for (let indice = 0; indice < 30; indice += 1) {
+      const { res, next } = requisitar(ip);
+      responder(res, 423);
       expect(next).toHaveBeenCalledTimes(1);
       expect(next.mock.calls[0]).toEqual([]);
     }

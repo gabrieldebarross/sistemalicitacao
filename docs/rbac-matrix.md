@@ -12,6 +12,20 @@
 Um cargo **não** concede automaticamente autoridade. Papéis são atribuídos
 conforme autorização administrativa documentada.
 
+## Papel principal
+
+Cada usuário pode ter vários papéis. O **papel principal** (`usuarios.papel_principal_id`)
+é apenas a identidade exibida no cabeçalho e no perfil; ele **não** concede nem
+remove permissões. Todos os papéis atribuídos continuam valendo para autorização
+RBAC.
+
+O papel principal é definido pelo administrador na tela de usuários, dentro do
+modal de papéis, e precisa estar entre os papéis selecionados. Ao remover o
+papel principal, o sistema escolhe o primeiro papel restante; sem papéis, o
+campo fica nulo. A migration de implantação usa o vínculo de papel mais antigo
+de cada usuário como backfill e pode ser revertida removendo a FK, o índice e a
+coluna.
+
 ## Papéis (decisão ADR 0002)
 
 Decisão do responsável: os papéis de acesso (`Role`) são criados **com os nomes

@@ -15,7 +15,12 @@
   usuário ativo; mensagens genéricas em falhas de credencial; rate limiting de
   falhas de autenticação em login e MFA (refresh e respostas bem-sucedidas não
   consomem tentativas); bloqueio após 5 falhas por 15 minutos (configurável);
-  desbloqueio administrativo auditado.
+  desbloqueio administrativo auditado. Contas bloqueadas só recebem mensagem
+  específica quando a senha informada está correta; tentativas com senha
+  incorreta permanecem genéricas para reduzir enumeração de usuários. A partir
+  da penúltima falha do IP, a mensagem genérica inclui um aviso de que novas
+  tentativas podem bloquear temporariamente a conta, se ela existir; o aviso é
+  exibido também para e-mails inexistentes.
 - **Sessão:** cookies `HttpOnly` (`sl_token`, `sl_refresh`) e `SameSite=Lax`,
   `Secure` em produção. Access token curto (padrão 15 min) com `sid`; refresh
   token de 7 dias, rotacionado a cada uso e persistido somente como hash na

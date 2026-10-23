@@ -2,6 +2,7 @@ import type { Transaction } from 'sequelize';
 
 import { sequelize } from '../config/database.js';
 import { normalizarEmail, normalizarNome } from '../domain/normalization.js';
+import { resolverPapelPrincipalId } from '../domain/rbac.js';
 import {
   ConflictError,
   NotFoundError,
@@ -37,6 +38,7 @@ export interface UsuarioDTO {
   ativo: boolean;
   bloqueadoAte: Date | null;
   cargo: { id: number; nome: string } | null;
+  papelPrincipal: { id: number; nome: string } | null;
   roles: string[];
   setores: SetorUsuarioDTO[];
 }
@@ -84,6 +86,9 @@ function toDTO(
     bloqueadoAte: usuario.bloqueadoAte,
     cargo: usuario.cargo
       ? { id: usuario.cargo.id, nome: usuario.cargo.nome }
+      : null,
+    papelPrincipal: usuario.papelPrincipal
+      ? { id: usuario.papelPrincipal.id, nome: usuario.papelPrincipal.nome }
       : null,
     roles: (usuario.roles ?? []).map((role) => role.nome),
     setores: setoresDoUsuario(usuario.id, vinculos),
@@ -192,6 +197,7 @@ export async function criar(
       await usuarioRepo.definirRoles(
         criado.id,
         roleIds,
+        roleIds[0] ?? null,
         contexto.usuarioId,
         transaction,
       );
@@ -293,24 +299,41 @@ export async function atualizar(
 
 export async function definirRoles(
   id: number,
-  roleIds: readonly number[],
+  input: { roleIds: number[]; papelPrincipalId?: number | null },
   contexto: ContextoRequisicao,
 ): Promise<UsuarioDTO> {
   const usuario = await usuarioRepo.buscarPorId(id);
   if (!usuario) {
     throw new NotFoundError('Usuário não encontrado.');
   }
+
+  const roleIds = [...new Set(input.roleIds)];
   await validarRoles(roleIds);
+
+  const papelPrincipalId = resolverPapelPrincipalId(
+    roleIds,
+    input.papelPrincipalId,
+    usuario.papelPrincipalId,
+  );
+
+  if (papelPrincipalId !== null && !roleIds.includes(papelPrincipalId)) {
+    throw new ValidationError(
+      'O papel principal deve estar entre os papéis selecionados.',
+    );
+  }
+
   await sequelize.transaction(async (transaction) => {
     await usuarioRepo.definirRoles(
       id,
       roleIds,
+      papelPrincipalId,
       contexto.usuarioId,
       transaction,
     );
   });
-  const roles =
-    roleIds.length > 0 ? await roleRepo.buscarPorIds(roleIds) : [];
+
+  const roles = roleIds.length > 0 ? await roleRepo.buscarPorIds(roleIds) : [];
+  const principal = roles.find((role) => role.id === papelPrincipalId);
   await auditoria.registrar(contexto, {
     acao: 'DEFINIR_ROLES',
     recurso: 'usuario',
@@ -318,6 +341,8 @@ export async function definirRoles(
     metadados: {
       usuario: usuario.nome,
       papeis: roles.map((role) => role.nome),
+      papelPrincipalId,
+      papelPrincipal: principal?.nome ?? null,
     },
   });
   return buscarPorId(id);

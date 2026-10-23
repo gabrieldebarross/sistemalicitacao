@@ -5,4 +5,10 @@ export interface ContextoRequisicao {
   ip: string | null;
   userAgent: string | null;
   permissoes: ReadonlySet<string>;
+  /**
+   * Falhas de login já registradas para o IP antes da requisição atual.
+   * Usado apenas para avisos genéricos de bloqueio, sem revelar se o usuário
+   * existe.
+   */
+  tentativasLoginIp?: number;
 }

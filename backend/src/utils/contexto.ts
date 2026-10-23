@@ -17,6 +17,10 @@ export function contextoDe(
     ip: req.ip ?? null,
     userAgent: req.header('user-agent') ?? null,
     permissoes: auth?.permissoes ?? new Set<string>(),
+    tentativasLoginIp:
+      typeof res.locals.tentativasLoginIp === 'number'
+        ? res.locals.tentativasLoginIp
+        : 0,
   };
 }
 

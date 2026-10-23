@@ -133,6 +133,12 @@ export default function PerfilPage() {
             </Campo>
             <div className="text-sm text-tinta-500">
               <p>Cargo: {perfil.cargo?.nome ?? 'Não definido'}</p>
+              <p>
+                Papel principal:{' '}
+                {perfil.papelPrincipal?.nome ??
+                  perfil.roles[0] ??
+                  'Não definido'}
+              </p>
               <p>Papéis: {perfil.roles.join(', ') || 'Sem papel'}</p>
             </div>
             <div className="flex justify-end">

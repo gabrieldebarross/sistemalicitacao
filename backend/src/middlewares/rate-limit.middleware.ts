@@ -35,6 +35,10 @@ export function limitarLogin(
     return;
   }
 
+  // A contagem é anterior à requisição atual. O login usa esse valor apenas
+  // para avisos genéricos, sem confirmar a existência da conta.
+  res.locals.tentativasLoginIp = atual?.contagem ?? 0;
+
   res.on('finish', () => {
     if (res.statusCode !== 401) {
       return;

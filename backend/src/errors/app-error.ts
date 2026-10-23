@@ -37,6 +37,17 @@ export class AuthenticationError extends AppError {
 }
 
 /**
+ * Conta bloqueada temporariamente por tentativas de login malsucedidas.
+ * Só deve ser exposta depois de validar a senha, para não permitir enumeração
+ * de usuários por tentativas de força bruta.
+ */
+export class AccountLockedError extends AppError {
+  constructor(message: string, detalhes?: AppErrorDetalhes) {
+    super(message, 423, 'CONTA_BLOQUEADA', detalhes);
+  }
+}
+
+/**
  * O desafio de MFA deixou de ser válido (expirou, foi revogado ou atingiu o
  * limite de tentativas). O cliente deve descartar o cookie de desafio e voltar
  * ao login.

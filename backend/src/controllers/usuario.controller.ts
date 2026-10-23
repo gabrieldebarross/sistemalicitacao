@@ -57,10 +57,10 @@ export async function definirRoles(
   res: Response,
 ): Promise<void> {
   const { id } = validar(idParamSchema, req.params);
-  const { roleIds } = validar(definirRolesSchema, req.body);
+  const dados = validar(definirRolesSchema, req.body);
   responderOk(
     res,
-    await usuarioService.definirRoles(id, roleIds, contextoDe(req, res)),
+    await usuarioService.definirRoles(id, dados, contextoDe(req, res)),
   );
 }
 

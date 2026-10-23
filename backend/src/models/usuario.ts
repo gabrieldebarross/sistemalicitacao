@@ -23,6 +23,7 @@ export class Usuario extends Model<
   declare senhaHash: string;
   declare senhaProvisoria: CreationOptional<boolean>;
   declare cargoId: ForeignKey<number | null>;
+  declare papelPrincipalId: ForeignKey<number | null>;
   declare ativo: CreationOptional<boolean>;
   declare ultimoAcessoEm: CreationOptional<Date | null>;
   declare tentativasFalhas: CreationOptional<number>;
@@ -35,6 +36,7 @@ export class Usuario extends Model<
   declare updatedAt: CreationOptional<Date>;
 
   declare cargo?: NonAttribute<Cargo>;
+  declare papelPrincipal?: NonAttribute<Role | null>;
   declare roles?: NonAttribute<Role[]>;
 }
 
@@ -54,6 +56,7 @@ Usuario.init(
       defaultValue: false,
     },
     cargoId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
+    papelPrincipalId: { type: DataTypes.BIGINT.UNSIGNED, allowNull: true },
     ativo: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: true },
     ultimoAcessoEm: { type: DataTypes.DATE, allowNull: true },
     tentativasFalhas: {

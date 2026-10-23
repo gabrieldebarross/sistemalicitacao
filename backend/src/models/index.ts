@@ -127,6 +127,11 @@ Permission.belongsToMany(Role, {
   as: 'roles',
 });
 
+Usuario.belongsTo(Role, {
+  foreignKey: 'papelPrincipalId',
+  as: 'papelPrincipal',
+});
+
 UserRole.belongsTo(Usuario, { foreignKey: 'usuarioId', as: 'usuario' });
 UserRole.belongsTo(Role, { foreignKey: 'roleId', as: 'role' });
 
